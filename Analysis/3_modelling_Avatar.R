@@ -48,7 +48,8 @@ model_data <- model_data %>%
          -Speed,
          -Success,
          -standard) %>% # only for now
-  mutate(Norm_Delta = Delta/max(Delta))
+  mutate(Norm_Delta = Delta/max(Delta)) %>%
+  filter(Abs_Norm_pos < 1.01)
 
 #### Models ####
 #### Placement as predicted variable ####

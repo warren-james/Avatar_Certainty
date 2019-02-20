@@ -13,7 +13,7 @@ library(R.matlab)
 
 #### Read in screen data ####
 # set path
-results_files <- dir("data/Early_pilot/4th/Screen_info/")
+results_files <- dir("data/Essex/Screen_info/")
 
 # setup data_frame 
 df_screen_info <- data.frame(Participant = character(),
@@ -34,7 +34,7 @@ df_avatar_info <- data.frame(Participant = character(),
 # loop throuh and read in data 
 for(f in unique(results_files)){
   # read in file
-  temp_df <- readMat(paste("data/Early_pilot/4th/Screen_info/", f, sep = ""))
+  temp_df <- readMat(paste("data/Essex/Screen_info/", f, sep = ""))
   
   # get participant name 
   Participant <- strsplit(f, '[_.]')[[1]]
@@ -100,7 +100,7 @@ save(df_avatar_info, file = "scratch/data/df_avater_info")
 
 #### Read in Decision data ####
 # setpath 
-results_files <- dir("data/Early_pilot/4th/Decisions/")
+results_files <- dir("data/Essex/Decisions/")
 
 # setup data.frame
 df_decisions <- data.frame(Participant = character(),
@@ -119,7 +119,7 @@ df_decisions <- data.frame(Participant = character(),
 # loop through files 
 for(f in results_files){
   # read in file
-  d <- read.csv(paste("data/Early_pilot/4th/Decisions/", f, sep = ""), header = T)
+  d <- read.csv(paste("data/Essex/Decisions/", f, sep = ""), header = T)
   
   # Participant 
   Participant <- strsplit(f, '[_.]')[[1]]
@@ -193,7 +193,7 @@ save(df_decisions, file = "scratch/data/df_decisions")
 
 #### Read in Estimates ####
 # setup estimates path
-results_files <- dir("data/Early_pilot/4th/Estimates/")
+results_files <- dir("data/Essex/Estimates/")
 
 # setup dataframe
 df_estimates <- c(Participant = character(),
@@ -203,7 +203,7 @@ df_estimates <- c(Participant = character(),
 # loop to read 
 for(f in results_files){
   # read file
-  d <- read.csv(paste("data/Early_pilot/4th/Estimates/", f, sep = ""), header = T)
+  d <- read.csv(paste("data/Essex/Estimates/", f, sep = ""), header = T)
   
   # Participant 
   Participant <- strsplit(f, '[_.]')[[1]]
@@ -238,7 +238,7 @@ save(df_estimates, file = "scratch/data/df_estimates")
 
 #### Read in click history ####
 # set path 
-results_files <- dir("data/Early_pilot/4th/Click_history/")
+results_files <- dir("data/Essex/Click_history/")
 
 # empty frame
 df_clickhist <- data.frame(Participant = character(),
@@ -252,7 +252,7 @@ df_clickhist <- data.frame(Participant = character(),
 # loop to read in data 
 for(f in results_files){
   # read file
-  d <- read.csv(paste("data/Early_pilot/4th/Click_history/", f, sep = ""), header = T)
+  d <- read.csv(paste("data/Essex/Click_history/", f, sep = ""), header = T)
   
   # Participant 
   Participant <- strsplit(f, '[_.]')[[1]]
@@ -277,7 +277,7 @@ df_clickhist <- select(df_clickhist,
 save(df_clickhist, file = "scratch/data/df_clickhist")
 
 #### Read in Demo_phase ####
-results_files <- dir("data/Early_pilot/4th/Demo_phase/")
+results_files <- dir("data/Essex/Demo_phase/")
 
 # empty frame
 df_demo_phase <- data.frame(Participant = character(),
@@ -286,7 +286,7 @@ df_demo_phase <- data.frame(Participant = character(),
 
 for(f in results_files){
   # make file
-  d <- read.csv(paste("data/Early_pilot/4th/Demo_phase/", f, sep = ""), header = T)
+  d <- read.csv(paste("data/Essex/Demo_phase/", f, sep = ""), header = T)
   
   # Participant 
   Participant <- strsplit(f, '[_.]')[[1]]
@@ -319,7 +319,7 @@ save(df_demo_phase, file = "scratch/data/df_demo_phase")
 
 #### Read in Confidence ####
 # set path
-results_files <- dir("data/Early_pilot/4th/Confidence/")
+results_files <- dir("data/Essex/Confidence/")
 
 # setup data frame 
 df_confidence <- data.frame(Participant = character(),
@@ -331,7 +331,7 @@ df_confidence <- data.frame(Participant = character(),
 # loop through and save 
 for(f in results_files){
   # read in data 
-  d <- read.csv(paste("data/Early_pilot/4th/Confidence/", f, sep = ""))
+  d <- read.csv(paste("data/Essex/Confidence/", f, sep = ""))
   
   # Get Participant number 
   Participant <- strsplit(f, '[_]')[[1]]

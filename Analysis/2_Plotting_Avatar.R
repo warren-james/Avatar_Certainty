@@ -114,13 +114,20 @@ plt_estimates <- df_est_sim %>%
               aes(y = Success),
               se = F) +
   theme_bw() +
-  facet_wrap(~truck_perf + Participant) +
+  facet_wrap(~truck_perf + Participant, ncol = 10) +
   theme(legend.position = "bottom",
-        strip.text.x = element_text(margin = margin(0.01,0,0.01,0, "mm")))
+        strip.text.x = element_blank())
 plt_estimates$labels$y <- "Estimated Accuracy"
 plt_estimates$labels$colour <- "Estimate Type"
 plt_estimates$labels$shape <- "Estimate Type"
 plt_estimates
+
+# save 
+ggsave("scratch/plots/plt_estimates.png",
+       height = 17,
+       width = 24,
+       units = "cm")
+
 
 #### PLOTS: decision phase ####
 plt_decisions <- df_decisions %>%
@@ -128,21 +135,104 @@ plt_decisions <- df_decisions %>%
          Spread = as.factor(Spread),
          Rand_first = as.factor(Rand_first),
          Norm_Placement = abs(Placed_x/Delta)) %>%
-  ggplot(aes(Delta, Norm_Placement)) + #, colour = Rand_first)) + 
+  ggplot(aes(Delta, Norm_Placement, 
+             colour = truck_perf)) + 
   geom_point(alpha = 0.2) + 
   theme_bw() + 
-  facet_wrap(~truck_perf + Participant, ncol = 4) + 
+  facet_wrap(~truck_perf + Participant, ncol = 10) + 
   theme(legend.position = "bottom",
-        strip.text.x = element_text(margin = margin(0.01,0,0.01,0, "mm")))
+        strip.text.x = element_blank()) + 
+  scale_colour_ptol()
 plt_decisions$labels$x <- "Delta (pixels)"
 plt_decisions$labels$y <- "Absolute Normalised Avatar Position"
 plt_decisions
 
-#### PLOTS: click history ####
-# not sure what this should look like...
+# save 
+ggsave("scratch/plots/plt_decisions.png",
+       height = 17,
+       width = 24,
+       units = "cm")
+
+#### PLOT: decisions phase again... with order info ####
+plt_decisions <- df_decisions %>%
+  mutate(Condition = as.factor(Condition),
+         Spread = as.factor(Spread),
+         Rand_first = as.factor(Rand_first),
+         Norm_Placement = abs(Placed_x/Delta)) %>%
+  ggplot(aes(Delta, Norm_Placement, 
+             colour = truck_perf)) + 
+  geom_point(alpha = 0.2) + 
+  theme_bw() + 
+  facet_wrap(~Participant + Block + truck_perf, ncol = 10) + 
+  theme(legend.position = "bottom",
+        strip.text.x = element_blank()) + 
+  scale_colour_ptol()
+plt_decisions$labels$x <- "Delta (pixels)"
+plt_decisions$labels$y <- "Absolute Normalised Avatar Position"
+plt_decisions
+
+# save 
+ggsave("scratch/plots/plt_decisions_order.png",
+       height = 17,
+       width = 24,
+       units = "cm")
+
+#### PLOT: placement by furthest and closest, and Condition ####
+# plot of placement position
+
+# first, remove the mid point as that's not very diagnostic
+plt_dist_dec <- df_decisions %>%
+  group_by(Participant) %>%
+  mutate(mid_delta = mean(as.numeric(Delta))) %>%
+  filter(as.numeric(Delta) != mid_delta) 
+
+# label the new "conditions"
+plt_dist_dec$dist_type <- "Close"
+plt_dist_dec$dist_type[as.numeric(plt_dist_dec$Delta) > plt_dist_dec$mid_delta] <- "Far"
+
+# Make the plot
+plt_dist_dec <- plt_dist_dec %>% 
+  mutate(abs_pos = abs(Placed_x)/Delta) %>%
+  group_by(Participant, dist_type, truck_perf) %>%
+  summarise(pos = mean(abs_pos)) %>%
+  ggplot(aes(pos, 
+             colour = truck_perf,
+             fill = truck_perf)) + 
+  geom_density(alpha = 0.3) + 
+  facet_wrap(~dist_type)
+plt_dist_dec$labels$x <- "Normalised Placement"
+plt_dist_dec$labels$colour <- "Condition"
+plt_dist_dec$labels$fill <- "Condition"
+plt_dist_dec
+
+
+# save 
+ggsave("scratch/plots/plt_dist_dec.png",
+       height = 8,
+       width = 14,
+       units = "cm")
+
+
 
 
 #### work in progress #### 
+# some things that might not be needed... but might be
+# so I don't want to delete them 
+
+#### PLOTS: click history ####
+# not sure what this should look like...
+
+# maybe num clicks by condition and distance?
+df_clickhist %>%
+  mutate(Spread = as.factor(Spread)) %>%
+  group_by(Trial, Delta, Participant, Spread) %>%
+  summarise(max_clicks = max(click_num)) %>%
+  ungroup() %>%
+  ggplot(aes(max_clicks,
+             colour = Spread,
+             fill = Spread)) + 
+  geom_histogram(position = "dodge") + 
+  facet_wrap(~Delta)
 
 #### Opt Acc shaded regions ####
 # sim acc for all possible dists 
@@ -284,7 +374,8 @@ df_decisions %>%
   geom_density(alpha = 0.2) + 
   theme_bw() + 
   theme(legend.position = "bottom") + 
-  scale_fill_ptol()
+  scale_fill_ptol() +
+  facet_wrap(~Rand_first)
 
 # same again by participant 
 df_decisions %>%
@@ -292,7 +383,8 @@ df_decisions %>%
   ggplot(aes(log2_RT, fill = truck_perf)) + 
   geom_density(alpha = 0.2) + 
   theme_bw() + 
-  theme(legend.position = "bottom") + 
+  theme(legend.position = "bottom",
+        strip.text.x = element_blank()) + 
   scale_fill_ptol() + 
   facet_wrap(~Rand_first + Participant)
 
@@ -322,17 +414,18 @@ df_decisions %>%
 # How best to represent this
 # this kind of works... might have to do some tweeking to make it 
 # as clear as possible what's happened 
-df_confidence %>% 
-  # get some scaled versions of confidence to give 0 a meaning
-  mutate(zeroed_conf = (Confidence - (max(df_screen_info$x_res/4))),
-         scaled_conf = zeroed_conf/(max(df_screen_info$x_res)/2)) %>%
-  group_by(Participant, Delta, Y_or_N, Spread) %>%
-  summarise(avg_Confidence = mean(scaled_conf)) %>%
-  ungroup() %>%
-  # to convert confidence into estimates of accuracy
-  mutate(est_acc = abs((Y_or_N - 1) + avg_Confidence),
-         Spread = as.factor(Spread)) %>%
-  ggplot(aes(Delta, est_acc, colour = Spread)) + 
-  geom_jitter() + 
-  facet_wrap(~Participant)
+# df_confidence %>% 
+#   # get some scaled versions of confidence to give 0 a meaning
+#   mutate(zeroed_conf = (Confidence - (max(df_screen_info$x_res/4))),
+#          scaled_conf = zeroed_conf/(max(df_screen_info$x_res)/2)) %>%
+#   group_by(Participant, Delta, Y_or_N, Spread) %>%
+#   summarise(avg_Confidence = mean(scaled_conf)) %>%
+#   ungroup() %>%
+#   # to convert confidence into estimates of accuracy
+#   mutate(est_acc = abs((Y_or_N - 1) + avg_Confidence),
+#          Spread = as.factor(Spread)) %>%
+#   ggplot(aes(Delta, est_acc, colour = Spread)) + 
+#   geom_jitter() + 
+#   facet_wrap(~Participant)
+
 
