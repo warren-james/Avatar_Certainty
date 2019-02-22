@@ -195,6 +195,7 @@ plt_dist_dec <- plt_dist_dec %>%
   mutate(abs_pos = abs(Placed_x)/Delta) %>%
   group_by(Participant, dist_type, truck_perf) %>%
   summarise(pos = mean(abs_pos)) %>%
+  ungroup() %>%
   ggplot(aes(pos, 
              colour = truck_perf,
              fill = truck_perf)) + 
@@ -205,15 +206,66 @@ plt_dist_dec$labels$colour <- "Condition"
 plt_dist_dec$labels$fill <- "Condition"
 plt_dist_dec
 
-
 # save 
 ggsave("scratch/plots/plt_dist_dec.png",
        height = 8,
        width = 14,
        units = "cm")
 
+# same again but without getting means 
+plt_dist_dec_2 <- df_decisions %>%
+  group_by(Participant) %>%
+  mutate(mid_delta = mean(as.numeric(Delta))) %>%
+  filter(as.numeric(Delta) != mid_delta)
+# add new labels
+plt_dist_dec_2$dist_type <- "Close"
+plt_dist_dec_2$dist_type[as.numeric(plt_dist_dec$Delta) > plt_dist_dec$mid_delta] <- "Far"
+# make plot 
+plt_dist_dec_2 <- plt_dist_dec_2 %>%
+  mutate(abs_pos = abs(Placed_x)/Delta) %>%
+  filter(abs_pos < 1.01) %>%
+  ggplot(aes(abs_pos, 
+             colour = truck_perf,
+             fill = truck_perf)) + 
+  geom_density(alpha = 0.3) +
+  facet_wrap(~dist_type)
+plt_dist_dec_2
+  
+# save 
+ggsave("scratch/plots/plt_dist_dec_2.png",
+       height = 8,
+       width = 14,
+       units = "cm")
 
+# without split, just delta 
+plt_dist_dec_2$data %>%
+  ggplot(aes(abs_pos, 
+             colour = truck_perf,
+             fill = truck_perf)) + 
+  geom_density(alpha = 0.3) + 
+  facet_wrap(~Delta)
 
+# quick model
+m4 <- brm(abs_pos ~ (dist_type + truck_perf)^2, 
+          data = plt_dist_dec_2$data, 
+          family = "beta",
+          iter = 2000,
+          chains = 1, 
+          cores = 1)
+
+# save for now... looks promising anyway
+save(m4, file = "models/outputs/brms_m4")
+
+# add rand intercepts?
+m4.1 <- brm(abs_pos ~ (dist_type + truck_perf)^2 + (1|Participant), 
+            data = plt_dist_dec_2$data, 
+            family = "beta",
+            iter = 2000,
+            chains = 1, 
+            cores = 1)
+
+# save for now 
+save(m4.1, file = "models/outputs/brms_m4.1")
 
 #### work in progress #### 
 # some things that might not be needed... but might be
