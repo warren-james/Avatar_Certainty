@@ -219,7 +219,7 @@ plt_dist_dec_2 <- df_decisions %>%
   filter(as.numeric(Delta) != mid_delta)
 # add new labels
 plt_dist_dec_2$dist_type <- "Close"
-plt_dist_dec_2$dist_type[as.numeric(plt_dist_dec$Delta) > plt_dist_dec$mid_delta] <- "Far"
+plt_dist_dec_2$dist_type[as.numeric(plt_dist_dec_2$Delta) > plt_dist_dec_2$mid_delta] <- "Far"
 # make plot 
 plt_dist_dec_2 <- plt_dist_dec_2 %>%
   mutate(abs_pos = abs(Placed_x)/Delta) %>%

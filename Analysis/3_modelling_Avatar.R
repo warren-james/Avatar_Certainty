@@ -51,6 +51,42 @@ model_data <- model_data %>%
   mutate(Norm_Delta = Delta/max(Delta)) %>%
   filter(Abs_Norm_pos < 1.01)
 
+
+# load in the estimates data 
+load("scratch/data/df_estimates")
+
+#### pre-analysis #### 
+# first want to look at the correlation of estimates accross condition 
+# within in each participant 
+
+# so sort that 
+temp <- df_estimates %>%
+  filter(Estimate_Type == "Participant") %>%
+  group_by(Participant, truck_perf, Delta) %>%
+  summarise(Estimate = mean(Estimate)) %>%
+  spread(truck_perf, Estimate) %>%
+  ggplot(aes(Random_Uniform, Highly_Certain, 
+             colour = Delta)) + 
+  geom_point() + 
+  geom_smooth(method = "glm",
+              method.args = list(family = "binomial"),
+              se = F) + 
+  facet_wrap(~Participant)
+ temp 
+
+# get the R^2 values 
+for(p in unique(df_estimates$Participant)){
+  # subset
+  ss <- df_estimates[df_estimates$Participant == p,]
+  # linear model 
+  check_cor <- glm(Estimate ~ (Delta + truck_perf)^2,
+                   data = ss,
+                   family = "binomial")
+  # get R^2 value
+  rsqr <- summary(check_cor)$r.squared
+  print(rsqr)
+  
+}
 #### Models ####
 #### Placement as predicted variable ####
 #### place_m1: Norm_placement ~ Delta ####
