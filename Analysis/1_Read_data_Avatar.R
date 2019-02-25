@@ -6,10 +6,22 @@ library(tidyverse)
 library(R.matlab)
 
 #### functions ####
-# do we need any? 
+# get probability of success
+prob_success <- function(pos, delta, beta, max_speed){
+  # get observations
+  y <- (round(rbeta(100000, beta, beta)*max_speed)+1) * travel_time
+  
+  # get prob of success 
+  chance1 <- sum(y >= delta - abs(pos))/length(y)
+  chance2 <- sum(y >= delta + abs(pos))/length(y)
+  
+  # output 
+  chance <- (chance1 + chance2)/2 
+  return(chance)
+}
 
 #### Constants ####
-# again, probably don't need 
+travel_time <- 100
 
 #### Read in screen data ####
 # set path
@@ -181,6 +193,16 @@ for(p in unique(df_decisions$participant)){
 }
 
 rm(p)
+
+# add in the max_speed info 
+df_decisions <- merge(df_decisions, df_avatar_info)
+
+# add in chance of success 
+df_decisions <- df_decisions %>% 
+  rowwise() %>%
+  mutate(chance = prob_success(placed_x, delta, spread, max_speed)) %>%
+  ungroup()
+
 
 # save this
 save(df_decisions, file = "scratch/data/df_decisions")

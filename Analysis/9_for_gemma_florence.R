@@ -32,17 +32,17 @@ plt
 		std_err_v = sd(var_dist)/ sqrt(n))) -> df2
 
 # plot how mean position varies with delta and condition 
-plt <- ggplot(df2, aes(
+plt_mean <- ggplot(df2, aes(
 	x = delta, 
 	y = position, 
 	ymin = position - 1.96 * std_err_p,
 	ymax = position + 1.96 * std_err_p,
 	colour = truck_perf))
-plt <- plt + geom_errorbar(colour = "gray") + geom_path()
-plt <- plt + scale_y_continuous(limits = c(0, 1), expand = c(0, 0))
-plt <- plt + scale_x_continuous(breaks = unique(df$delta))
-plt <- plt + theme_bw()
-plt
+plt_mean <- plt_mean + geom_errorbar(colour = "gray") + geom_path()
+plt_mean <- plt_mean + scale_y_continuous(limits = c(0, 1), expand = c(0, 0))
+plt_mean <- plt_mean + scale_x_continuous(breaks = unique(df$delta))
+plt_mean <- plt_mean + theme_bw()
+plt_mean
 
 # plot how variance position varies with delta and condition 
 plt <- ggplot(df2, aes(
@@ -56,4 +56,27 @@ plt <- plt + scale_y_continuous(expand = c(0, 0))
 plt <- plt + scale_x_continuous(breaks = unique(df$delta))
 plt <- plt + theme_bw()
 plt
+
+
+
+# anovas 
+pos_aov <- aov(data = df2, position ~ truck_perf * delta)
+var_aov <- aov(data = df2, variance ~ delta * truck_perf)
+
+#### SPSS data ####
+# sort mean pos 
+SPSS_mean <- df %>%
+  group_by(participant) %>%
+  mutate(mean_position = round(mean_position, digits = 3)) %>%
+  select(-var_dist) %>%
+  unite("value",
+        truck_perf:delta) %>%
+  spread(value, mean_position)
+
+# save file
+write.csv(SPSS_mean, file = "scratch/data/SPSS_mean.txt", row.names = F)
+
+
+
+
 

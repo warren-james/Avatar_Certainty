@@ -9,6 +9,9 @@
 # for Condition, 1 = Avatar, 2 = Truck
 # for Spread 1 = Randunif, 2 = Hard cutoff
 
+#### Any functions ####
+# none so far 
+
 #### Constants ####
 travel_time <- 100
 
@@ -38,6 +41,7 @@ load("scratch/data/df_avater_info")
 # confidence 
 load("scratch/data/df_confidence")
 
+
 #### PLOTS: ####
 #### PLOTS: Estimates vs actual ####
 betas <- unique(df_decisions$spread)
@@ -48,6 +52,7 @@ df_simulated <- data.frame(participant = character(),
                            delta = numeric(),
                            estimate = numeric(),
                            estimate_type = character())
+
 
 # loop to get a simulation of what accuracy would look like 
 # for each separation in each condition 
@@ -68,6 +73,7 @@ for(p in unique(df_estimates$participant)){
     y <- (round(rbeta(100000, B, B)*max_speed)+1) * travel_time
     
     # make data_frame
+    # just unique(ss$delta)
     deltas <- data.frame(participant = p,
                          spread = B,
                          delta = unique(ss$delta))
@@ -79,7 +85,6 @@ for(p in unique(df_estimates$participant)){
     
     # add to data frame
     df_simulated = rbind(df_simulated, as.data.frame(deltas))
-    
   }
 }
 
@@ -92,9 +97,6 @@ df_simulated$truck_perf[df_simulated$spread > 1] = "Constant"
 
 # bind data sets? 
 df_est_sim <- rbind(df_estimates, df_simulated)
-
-# tidy
-rm(df_simulated)
 
 # now get glm lines for this 
 plt_estimates <- df_est_sim %>%
@@ -178,6 +180,19 @@ ggsave("scratch/plots/plt_decisions_order.png",
        height = 17,
        width = 24,
        units = "cm")
+
+#### PLOT: chance of success on y-axis ####
+plt_acc <- df_decisions %>%
+  mutate(participant = as.factor(participant)) %>%
+  group_by(participant, delta, truck_perf) %>%
+  summarise(mean_acc = mean(chance)) %>%
+  ggplot(aes(delta, mean_acc, 
+             colour = truck_perf)) + 
+  geom_path() + 
+  scale_colour_ptol() + 
+  theme_bw() 
+plt_acc
+
 
 #### PLOT: placement by furthest and closest, and Condition ####
 # plot of placement position
