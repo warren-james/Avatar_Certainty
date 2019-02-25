@@ -9,7 +9,7 @@ library(R.matlab)
 # get probability of success
 prob_success <- function(pos, delta, beta, max_speed){
   # get observations
-  y <- (round(rbeta(100000, beta, beta)*max_speed)+1) * travel_time
+  y <- (round(rbeta(100000, beta, beta)*max_speed)+1) * travel_time + 30
   
   # get prob of success 
   chance1 <- sum(y >= delta - abs(pos))/length(y)
