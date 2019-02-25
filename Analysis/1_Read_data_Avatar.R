@@ -16,18 +16,18 @@ library(R.matlab)
 results_files <- dir("data/Essex/Screen_info/")
 
 # setup data_frame 
-df_screen_info <- data.frame(Participant = character(),
-                          x_res = numeric(),
-                          y_res = numeric())
+df_screen_info <- data.frame(participant = character(),
+                             x_res = numeric(),
+                             y_res = numeric())
 
-df_deltas <- data.frame(Participant = character(),
-                     Delta = numeric())
+df_deltas <- data.frame(participant = character(),
+                        delta = numeric())
 
-df_beta <- data.frame(Participant = character(),
-                        beta1 = numeric(),
-                        beta2 = numeric())
+df_beta <- data.frame(participant = character(),
+                      beta1 = numeric(),
+                      beta2 = numeric())
 
-df_avatar_info <- data.frame(Participant = character(),
+df_avatar_info <- data.frame(participant = character(),
                              max_speed = numeric(),
                              reach = numeric())
 
@@ -60,19 +60,19 @@ for(f in unique(results_files)){
   
   # fill data frame 
   # screen
-  df_screen_info <- rbind(df_screen_info, data.frame(Participant = Participant,
-                                               x_res = x_res,
-                                               y_res = y_res))
+  df_screen_info <- rbind(df_screen_info, data.frame(participant = Participant,
+                                                     x_res = x_res,
+                                                     y_res = y_res))
   # deltas 
-  df_deltas <- rbind(df_deltas, data.frame(Participant = Participant, 
-                                           Delta = Delta))
+  df_deltas <- rbind(df_deltas, data.frame(participant = Participant, 
+                                           delta = Delta))
   # beta
-  df_beta <- rbind(df_beta, data.frame(Participant = Participant,
+  df_beta <- rbind(df_beta, data.frame(participant = Participant,
                                        beta1 = beta1,
                                        beta2 = beta2))
   
   # avatar 
-  df_avatar_info <- rbind(df_avatar_info, data.frame(Participant = Participant,
+  df_avatar_info <- rbind(df_avatar_info, data.frame(participant = Participant,
                                                      max_speed = max_speed,
                                                      reach = reach))
 }
@@ -103,18 +103,18 @@ save(df_avatar_info, file = "scratch/data/df_avater_info")
 results_files <- dir("data/Essex/Decisions/")
 
 # setup data.frame
-df_decisions <- data.frame(Participant = character(),
-                           Condition = character(),
-                           Spread = character(),
-                           Block = numeric(),
-                           Trial = numeric(),
-                           Delta = numeric(),
+df_decisions <- data.frame(participant = character(),
+                           condition = character(),
+                           spread = character(),
+                           block = numeric(),
+                           trial = numeric(),
+                           delta = numeric(),
                            RT = numeric(),
-                           Initial_X = numeric(),
-                           Placed_X = numeric(),
-                           Target_side = numeric(),
-                           Speed = numeric(),
-                           Success = numeric())
+                           initial_X = numeric(),
+                           placed_X = numeric(),
+                           target_side = numeric(),
+                           speed = numeric(),
+                           success = numeric())
 
 # loop through files 
 for(f in results_files){
@@ -126,7 +126,7 @@ for(f in results_files){
   Participant <- Participant[1]
   
   # add in Participant
-  d$Participant <- Participant
+  d$participant <- Participant
   
   # combine data
   df_decisions <- rbind(df_decisions, d)
@@ -137,20 +137,23 @@ rm(d, f, Participant, results_files)
 
 # arrange this 
 df_decisions <- select(df_decisions,
-                       Participant,
+                       participant,
                        everything())
+
+# sort colnames to be lower case 
+names(df_decisions) <- tolower(names(df_decisions))
 
 # add in an order variable 
 # empty vector
-Rand_first <- c()
+rand_first <- c()
 
 # loop through to classify
-for(p in unique(df_decisions$Participant)){
+for(p in unique(df_decisions$participant)){
   # get subset
-  ss <- df_decisions[df_decisions$Participant == p,] 
+  ss <- df_decisions[df_decisions$participant == p,] 
   
   # get first block condition
-  first_cond <- ss$Spread[ss$Block == 1 & ss$Trial == 1]
+  first_cond <- ss$spread[ss$block == 1 & ss$trial == 1]
   # check block 
   if(first_cond == 1){
     rf <- 1
@@ -159,22 +162,22 @@ for(p in unique(df_decisions$Participant)){
   }
   
   # add to empty vector
-  Rand_first <- c(Rand_first, rep(rf, nrow(ss)))
+  rand_first <- c(rand_first, rep(rf, nrow(ss)))
 }
 
 # add to data frame
-df_decisions$Rand_first <- Rand_first
+df_decisions$rand_first <- rand_first
 
 # tidy
-rm(first_cond, p, Rand_first, rf, ss)
+rm(first_cond, p, rand_first, rf, ss)
 
 # labels for spread 
-df_decisions$truck_perf <- "Random_Uniform"
-df_decisions$truck_perf[df_decisions$Spread > 1] = "Highly_Certain"
+df_decisions$truck_perf <- "Variable"
+df_decisions$truck_perf[df_decisions$spread > 1] = "Constant"
 
 # add in a standard sep 
-for(p in unique(df_decisions$Participant)){
-  df_decisions$standard[df_decisions$Participant == p] <- as.numeric(as.factor(df_decisions$Delta[df_decisions$Participant == p]))
+for(p in unique(df_decisions$participant)){
+  df_decisions$standard[df_decisions$participant == p] <- as.numeric(as.factor(df_decisions$Delta[df_decisions$participant == p]))
 }
 
 rm(p)
@@ -196,9 +199,9 @@ save(df_decisions, file = "scratch/data/df_decisions")
 results_files <- dir("data/Essex/Estimates/")
 
 # setup dataframe
-df_estimates <- c(Participant = character(),
-                  Delta = numeric(),
-                  Estimate = numeric())
+df_estimates <- c(participant = character(),
+                  delta = numeric(),
+                  estimate = numeric())
 
 # loop to read 
 for(f in results_files){
@@ -210,7 +213,7 @@ for(f in results_files){
   Participant <- Participant[1]
   
   # add in Participant
-  d$Participant <- Participant
+  d$participant <- Participant
   
   # bind to data frame
   df_estimates <- rbind(df_estimates, d)
@@ -221,16 +224,18 @@ rm(d, f, Participant, results_files)
 
 # arrange 
 df_estimates <- select(df_estimates,
-                       Participant,
+                       participant,
                        everything())
 
 # add in a label to use later 
-df_estimates$Estimate_Type <- "Participant"
+df_estimates$estimate_type <- "Participant"
 
 # add in truck_perf
-df_estimates$truck_perf <- "Random_Uniform"
-df_estimates$truck_perf[df_estimates$Spread > 1] = "Highly_Certain"
+df_estimates$truck_perf <- "Variable"
+df_estimates$truck_perf[df_estimates$Spread > 1] = "Constant"
 
+# sort to lower case
+names(df_estimates) <- tolower(names(df_estimates))
 
 # save this file 
 save(df_estimates, file = "scratch/data/df_estimates")
@@ -241,13 +246,13 @@ save(df_estimates, file = "scratch/data/df_estimates")
 results_files <- dir("data/Essex/Click_history/")
 
 # empty frame
-df_clickhist <- data.frame(Participant = character(),
-                           Block = numeric(),
-                           Trial = numeric(),
-                           Time_taken = numeric(),
-                           Delta = numeric(),
-                           Num_clicks = numeric(),
-                           Placed_x = numeric())
+df_clickhist <- data.frame(participant = character(),
+                           block = numeric(),
+                           trial = numeric(),
+                           time_taken = numeric(),
+                           delta = numeric(),
+                           num_clicks = numeric(),
+                           placed_x = numeric())
 
 # loop to read in data 
 for(f in results_files){
@@ -259,7 +264,7 @@ for(f in results_files){
   Participant <- Participant[1]
   
   # add in Participant
-  d$Participant <- Participant
+  d$participant <- Participant
   
   # bind 
   df_clickhist <- rbind(df_clickhist, d)
@@ -270,8 +275,11 @@ rm(d, f, Participant, results_files)
 
 # arrange 
 df_clickhist <- select(df_clickhist,
-                       Participant, 
+                       participant, 
                        everything())
+
+# sort out names 
+names(df_clickhist) <- tolower(names(df_clickhist))
 
 # save this
 save(df_clickhist, file = "scratch/data/df_clickhist")
@@ -280,9 +288,9 @@ save(df_clickhist, file = "scratch/data/df_clickhist")
 results_files <- dir("data/Essex/Demo_phase/")
 
 # empty frame
-df_demo_phase <- data.frame(Participant = character(),
-                            Trial = numeric(),
-                            Success = numeric())
+df_demo_phase <- data.frame(participant = character(),
+                            trial = numeric(),
+                            success = numeric())
 
 for(f in results_files){
   # make file
@@ -293,7 +301,7 @@ for(f in results_files){
   Participant <- Participant[1]
   
   # add in Participant
-  d$Participant <- Participant
+  d$participant <- Participant
   
   # bind together
   df_demo_phase <- rbind(df_demo_phase, d)
@@ -311,8 +319,11 @@ df_demo_phase <- select(df_demo_phase,
 df_demo_phase$Estimate_Type <- "Demo"
 
 # add in truck_perf
-df_demo_phase$truck_perf <- "Random_Uniform"
-df_demo_phase$truck_perf[df_demo_phase$Spread > 1] = "Highly_Certain"
+df_demo_phase$truck_perf <- "Variable"
+df_demo_phase$truck_perf[df_demo_phase$Spread > 1] = "Constant"
+
+# lower case 
+names(df_demo_phase) <- tolower(names(df_demo_phase))
 
 # save this 
 save(df_demo_phase, file = "scratch/data/df_demo_phase")
@@ -347,6 +358,9 @@ for(f in results_files){
 
 # tidy 
 rm(f, Participant, results_files, d)
+
+# lower case 
+names(df_confidence) <- tolower(names(df_confidence))
 
 # save 
 save(df_confidence, file = "scratch/data/df_confidence")

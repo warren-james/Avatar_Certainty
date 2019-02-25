@@ -16,6 +16,7 @@ travel_time <- 100
 library(tidyverse)
 library(ggthemes)
 library(psyphy)
+library(brms)
 
 #### Load in data ####
 # Distribution info
@@ -39,26 +40,26 @@ load("scratch/data/df_confidence")
 
 #### PLOTS: ####
 #### PLOTS: Estimates vs actual ####
-betas <- unique(df_decisions$Spread)
+betas <- unique(df_decisions$spread)
 
 # setup empty frame to mirror estimates 
-df_simulated <- data.frame(Participant = character(),
-                           Spread = numeric(),
-                           Delta = numeric(),
-                           Estimate = numeric(),
-                           Estimate_type = character())
+df_simulated <- data.frame(participant = character(),
+                           spread = numeric(),
+                           delta = numeric(),
+                           estimate = numeric(),
+                           estimate_type = character())
 
 # loop to get a simulation of what accuracy would look like 
 # for each separation in each condition 
-for(p in unique(df_estimates$Participant)){
+for(p in unique(df_estimates$participant)){
   # subset 
-  ss <- df_estimates[df_estimates$Participant == p,]
+  ss <- df_estimates[df_estimates$participant == p,]
   
   # max speed 
-  max_speed <- df_avatar_info$max_speed[df_avatar_info$Participant == p]
+  max_speed <- df_avatar_info$max_speed[df_avatar_info$participant == p]
   
   # reach 
-  reach <- df_avatar_info$reach[df_avatar_info$Participant == p]
+  reach <- df_avatar_info$reach[df_avatar_info$participant == p]
   
   for(B in unique(betas)){
     Spread <- B
@@ -67,14 +68,14 @@ for(p in unique(df_estimates$Participant)){
     y <- (round(rbeta(100000, B, B)*max_speed)+1) * travel_time
     
     # make data_frame
-    deltas <- data.frame(Participant = p,
-                         Spread = B,
-                         Delta = unique(ss$Delta))
+    deltas <- data.frame(participant = p,
+                         spread = B,
+                         delta = unique(ss$delta))
     
     deltas <- deltas %>%
-      group_by(Participant, Spread, Delta) %>%
-      mutate(Estimate = sum(y >= Delta - reach)/length(y),
-             Estimate_Type = "Simulated")
+      group_by(participant, spread, delta) %>%
+      mutate(estimate = sum(y >= delta - reach)/length(y),
+             estimate_type = "Simulated")
     
     # add to data frame
     df_simulated = rbind(df_simulated, as.data.frame(deltas))
@@ -86,8 +87,8 @@ for(p in unique(df_estimates$Participant)){
 rm(deltas, ss, B, betas, max_speed, p, Spread, y, reach)
 
 # add in truck_perf
-df_simulated$truck_perf <- "Random_Uniform"
-df_simulated$truck_perf[df_simulated$Spread > 1] = "Highly_Certain"
+df_simulated$truck_perf <- "Variable"
+df_simulated$truck_perf[df_simulated$spread > 1] = "Constant"
 
 # bind data sets? 
 df_est_sim <- rbind(df_estimates, df_simulated)
@@ -97,24 +98,25 @@ rm(df_simulated)
 
 # now get glm lines for this 
 plt_estimates <- df_est_sim %>%
-  mutate(Spread = as.factor(Spread)) %>%
-  group_by(Participant, truck_perf, Delta, Estimate_Type) %>%
-  summarise(Estimate = mean(Estimate)) %>%
-  ggplot(aes(Delta, Estimate,
-             colour = Estimate_Type,
-             shape = Estimate_Type)) +
+  mutate(Spread = as.factor(spread)) %>%
+  group_by(participant, truck_perf, delta, estimate_type) %>%
+  summarise(estimate = mean(estimate)) %>%
+  ggplot(aes(delta, estimate,
+             colour = estimate_type,
+             shape = estimate_type)) +
   geom_point() +
   geom_smooth(method = glm,
               method.args = list(family = "binomial"),
-              aes(y = Estimate),
+              aes(y = estimate),
               se = F) +
-  geom_smooth(data = df_demo_phase,
-              method = glm,
-              method.args = list(family = "binomial"),
-              aes(y = Success),
-              se = F) +
+  # geom_smooth(data = df_demo_phase,
+  #             method = glm,
+  #             method.args = list(family = "binomial"),
+  #             aes(y = success),
+  #             se = F) +
   theme_bw() +
-  facet_wrap(~truck_perf + Participant, ncol = 10) +
+  scale_colour_ptol() + 
+  facet_wrap(~truck_perf + participant, ncol = 10) +
   theme(legend.position = "bottom",
         strip.text.x = element_blank())
 plt_estimates$labels$y <- "Estimated Accuracy"
@@ -131,15 +133,15 @@ ggsave("scratch/plots/plt_estimates.png",
 
 #### PLOTS: decision phase ####
 plt_decisions <- df_decisions %>%
-  mutate(Condition = as.factor(Condition),
-         Spread = as.factor(Spread),
-         Rand_first = as.factor(Rand_first),
-         Norm_Placement = abs(Placed_x/Delta)) %>%
-  ggplot(aes(Delta, Norm_Placement, 
+  mutate(Condition = as.factor(condition),
+         Spread = as.factor(spread),
+         Rand_first = as.factor(rand_first),
+         Norm_Placement = abs(placed_x/delta)) %>%
+  ggplot(aes(delta, Norm_Placement, 
              colour = truck_perf)) + 
   geom_point(alpha = 0.2) + 
   theme_bw() + 
-  facet_wrap(~truck_perf + Participant, ncol = 10) + 
+  facet_wrap(~truck_perf + participant, ncol = 10) + 
   theme(legend.position = "bottom",
         strip.text.x = element_blank()) + 
   scale_colour_ptol()
@@ -155,15 +157,15 @@ ggsave("scratch/plots/plt_decisions.png",
 
 #### PLOT: decisions phase again... with order info ####
 plt_decisions <- df_decisions %>%
-  mutate(Condition = as.factor(Condition),
-         Spread = as.factor(Spread),
-         Rand_first = as.factor(Rand_first),
-         Norm_Placement = abs(Placed_x/Delta)) %>%
-  ggplot(aes(Delta, Norm_Placement, 
+  mutate(Condition = as.factor(condition),
+         Spread = as.factor(spread),
+         Rand_first = as.factor(rand_first),
+         Norm_Placement = abs(placed_x/delta)) %>%
+  ggplot(aes(delta, Norm_Placement, 
              colour = truck_perf)) + 
   geom_point(alpha = 0.2) + 
   theme_bw() + 
-  facet_wrap(~Participant + Block + truck_perf, ncol = 10) + 
+  facet_wrap(~participant + block + truck_perf, ncol = 10) + 
   theme(legend.position = "bottom",
         strip.text.x = element_blank()) + 
   scale_colour_ptol()
@@ -182,18 +184,18 @@ ggsave("scratch/plots/plt_decisions_order.png",
 
 # first, remove the mid point as that's not very diagnostic
 plt_dist_dec <- df_decisions %>%
-  group_by(Participant) %>%
-  mutate(mid_delta = mean(as.numeric(Delta))) %>%
-  filter(as.numeric(Delta) != mid_delta) 
+  group_by(participant) %>%
+  mutate(mid_delta = mean(as.numeric(delta))) %>%
+  filter(as.numeric(delta) != mid_delta) 
 
 # label the new "conditions"
 plt_dist_dec$dist_type <- "Close"
-plt_dist_dec$dist_type[as.numeric(plt_dist_dec$Delta) > plt_dist_dec$mid_delta] <- "Far"
+plt_dist_dec$dist_type[as.numeric(plt_dist_dec$delta) > plt_dist_dec$mid_delta] <- "Far"
 
 # Make the plot
 plt_dist_dec <- plt_dist_dec %>% 
-  mutate(abs_pos = abs(Placed_x)/Delta) %>%
-  group_by(Participant, dist_type, truck_perf) %>%
+  mutate(abs_pos = abs(placed_x)/delta) %>%
+  group_by(participant, dist_type, truck_perf) %>%
   summarise(pos = mean(abs_pos)) %>%
   ungroup() %>%
   ggplot(aes(pos, 
@@ -214,21 +216,24 @@ ggsave("scratch/plots/plt_dist_dec.png",
 
 # same again but without getting means 
 plt_dist_dec_2 <- df_decisions %>%
-  group_by(Participant) %>%
-  mutate(mid_delta = mean(as.numeric(Delta))) %>%
-  filter(as.numeric(Delta) != mid_delta)
+  group_by(participant) %>%
+  mutate(mid_delta = mean(as.numeric(delta))) %>%
+  filter(as.numeric(delta) != mid_delta)
 # add new labels
 plt_dist_dec_2$dist_type <- "Close"
-plt_dist_dec_2$dist_type[as.numeric(plt_dist_dec_2$Delta) > plt_dist_dec_2$mid_delta] <- "Far"
+plt_dist_dec_2$dist_type[as.numeric(plt_dist_dec_2$delta) > plt_dist_dec_2$mid_delta] <- "Far"
 # make plot 
 plt_dist_dec_2 <- plt_dist_dec_2 %>%
-  mutate(abs_pos = abs(Placed_x)/Delta) %>%
+  mutate(abs_pos = abs(placed_x)/delta) %>%
   filter(abs_pos < 1.01) %>%
   ggplot(aes(abs_pos, 
              colour = truck_perf,
              fill = truck_perf)) + 
   geom_density(alpha = 0.3) +
-  facet_wrap(~dist_type)
+  facet_wrap(~dist_type) + 
+  scale_colour_ptol() + 
+  scale_fill_ptol() + 
+  theme_bw()
 plt_dist_dec_2
   
 # save 
@@ -243,7 +248,7 @@ plt_dist_dec_2$data %>%
              colour = truck_perf,
              fill = truck_perf)) + 
   geom_density(alpha = 0.3) + 
-  facet_wrap(~Delta)
+  facet_wrap(~delta)
 
 # quick model
 m4 <- brm(abs_pos ~ (dist_type + truck_perf)^2, 
@@ -257,7 +262,7 @@ m4 <- brm(abs_pos ~ (dist_type + truck_perf)^2,
 save(m4, file = "models/outputs/brms_m4")
 
 # add rand intercepts?
-m4.1 <- brm(abs_pos ~ (dist_type + truck_perf)^2 + (1|Participant), 
+m4.1 <- brm(abs_pos ~ (dist_type + truck_perf)^2 + (1|participant), 
             data = plt_dist_dec_2$data, 
             family = "beta",
             iter = 2000,
