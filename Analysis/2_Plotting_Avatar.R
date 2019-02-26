@@ -9,6 +9,23 @@
 # for Condition, 1 = Avatar, 2 = Truck
 # for Spread 1 = Randunif, 2 = Hard cutoff
 
+#### Any functions ####
+prob_success <- function(delta, beta, max_speed, opt){
+  # get observations
+  y <- (round(rbeta(100000, beta, beta)*max_speed)+1) * travel_time + 30
+  
+  # get prob of success
+  acc <- sum(y >= delta)/length(y)
+  
+  # check if opt strat or not
+  if(opt == TRUE && acc < 0.5){
+      acc <- 0.5
+  }
+  
+  # output 
+  return(round(acc, digits = 3))
+}
+
 #### Constants ####
 travel_time <- 100
 
@@ -38,6 +55,7 @@ load("scratch/data/df_avater_info")
 # confidence 
 load("scratch/data/df_confidence")
 
+
 #### PLOTS: ####
 #### PLOTS: Estimates vs actual ####
 betas <- unique(df_decisions$spread)
@@ -48,6 +66,7 @@ df_simulated <- data.frame(participant = character(),
                            delta = numeric(),
                            estimate = numeric(),
                            estimate_type = character())
+
 
 # loop to get a simulation of what accuracy would look like 
 # for each separation in each condition 
@@ -68,6 +87,7 @@ for(p in unique(df_estimates$participant)){
     y <- (round(rbeta(100000, B, B)*max_speed)+1) * travel_time
     
     # make data_frame
+    # just unique(ss$delta)
     deltas <- data.frame(participant = p,
                          spread = B,
                          delta = unique(ss$delta))
@@ -79,7 +99,6 @@ for(p in unique(df_estimates$participant)){
     
     # add to data frame
     df_simulated = rbind(df_simulated, as.data.frame(deltas))
-    
   }
 }
 
@@ -92,9 +111,6 @@ df_simulated$truck_perf[df_simulated$spread > 1] = "Constant"
 
 # bind data sets? 
 df_est_sim <- rbind(df_estimates, df_simulated)
-
-# tidy
-rm(df_simulated)
 
 # now get glm lines for this 
 plt_estimates <- df_est_sim %>%
@@ -178,6 +194,32 @@ ggsave("scratch/plots/plt_decisions_order.png",
        height = 17,
        width = 24,
        units = "cm")
+
+#### PLOT: chance of success on y-axis ####
+#### Fix at some point... doesn't work... 
+plt_acc <- df_decisions %>%
+  #mutate(Participant = as.factor(participant)) %>%
+  group_by(participant, delta, truck_perf, spread) %>%
+  summarise(mean_acc = mean(chance)) %>%
+  ungroup()
+plt_acc <- ggplot(data = plt_acc, aes(delta, mean_acc)) + 
+  geom_path(aes(colour = truck_perf, group = participant)) + 
+  scale_colour_ptol() + 
+  theme_bw()  
+  #facet_wrap(~participant) + 
+  #theme(strip.text.x = element_blank())
+plt_acc
+
+#### PLOT: add in strat lines #### 
+# first add max speed to the data 
+max_speed <- df_avatar_info %>% 
+  select(-reach)
+plt_acc_2 <- merge(plt_acc$data, max_speed) %>%
+  rowwise() %>% 
+  mutate(opt_acc = prob_success(delta, spread, max_speed, TRUE),
+         cen_acc = prob_success(delta, spread, max_speed, FALSE)) %>%
+  ungroup() %>%
+  group_by(delta, truck_perf)
 
 #### PLOT: placement by furthest and closest, and Condition ####
 # plot of placement position
