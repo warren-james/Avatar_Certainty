@@ -31,6 +31,13 @@ plt
 		variance = mean(var_dist),
 		std_err_v = sd(var_dist)/ sqrt(n))) -> df2
 
+position_aov <- aov(data = df2, position ~ truck_perf * delta)
+summary(position_aov)
+
+variance_aov <- aov(data = df2, position ~ truck_perf * delta)
+summary(variance_aov)
+
+
 # plot how mean position varies with delta and condition 
 plt <- ggplot(df2, aes(
 	x = delta, 
