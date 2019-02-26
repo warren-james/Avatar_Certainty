@@ -15,7 +15,7 @@ prob_success <- function(delta, beta, max_speed, opt){
   y <- (round(rbeta(100000, beta, beta)*max_speed)+1) * travel_time + 30
   
   # get prob of success
-  acc <- sum(y >= delta)/length(y)
+  acc <- sum(y > delta)/length(y)
   
   # check if opt strat or not
   if(opt == TRUE && acc < 0.5){
@@ -201,26 +201,51 @@ plt_acc <- df_decisions %>%
   #mutate(Participant = as.factor(participant)) %>%
   group_by(participant, delta, truck_perf, spread) %>%
   summarise(mean_acc = mean(chance)) %>%
-  ungroup()
-plt_acc <- ggplot(data = plt_acc, aes(delta, mean_acc)) + 
-  geom_path(aes(colour = truck_perf, group = participant)) + 
+  ungroup() %>%
+  ggplot(aes(delta, mean_acc,
+             colour = truck_perf)) + 
+  geom_path(aes(group = interaction(participant, truck_perf)),
+            alpha = 0.2,
+            size = 1) + 
   scale_colour_ptol() + 
   theme_bw()  
-  #facet_wrap(~participant) + 
-  #theme(strip.text.x = element_blank())
 plt_acc
 
 #### PLOT: add in strat lines #### 
 # first add max speed to the data 
 max_speed <- df_avatar_info %>% 
   select(-reach)
+# get success rates
 plt_acc_2 <- merge(plt_acc$data, max_speed) %>%
   rowwise() %>% 
   mutate(opt_acc = prob_success(delta, spread, max_speed, TRUE),
          cen_acc = prob_success(delta, spread, max_speed, FALSE)) %>%
   ungroup() %>%
-  group_by(delta, truck_perf)
+  gather(opt_acc:cen_acc, 
+         key = "strategy",
+         value = "accuracy") %>%
+  group_by(delta, truck_perf, strategy) %>%
+  summarise(mean_acc = mean(accuracy)) %>%
+  ungroup()
+  
 
+plt_acc <- plt_acc +
+  geom_line(data = plt_acc_2,
+            aes(delta, mean_acc,
+                group = interaction(truck_perf, strategy),
+                linetype = strategy,
+                colour = truck_perf),
+            size = 1) + 
+  scale_linetype_manual(values = c("twodash", "longdash")) + 
+  facet_wrap(~truck_perf) + 
+  theme(strip.text.x = element_blank())
+plt_acc$labels$x <- "Delta (pixels)"
+plt_acc$labels$y <- "Average Accuracy"
+plt_acc$labels$colour <- "Condition"
+plt_acc$labels$linetype <- "Strategy"
+plt_acc
+
+# save
 #### PLOT: placement by furthest and closest, and Condition ####
 # plot of placement position
 
