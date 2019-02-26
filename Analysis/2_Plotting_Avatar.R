@@ -246,6 +246,61 @@ plt_acc$labels$linetype <- "Strategy"
 plt_acc
 
 # save
+
+
+#### PLOT: Ribbon plot ####
+# setup data
+df_decisions %>% 
+   select(participant, delta, truck_perf, chance) %>%
+   group_by(participant, delta, truck_perf) %>%
+   summarize(
+     exp_chance = mean(chance)) %>%
+   group_by(delta, truck_perf) %>%
+   summarize(
+     y1_min = quantile(exp_chance, 0),
+     y1_max = quantile(exp_chance, 1),
+     
+     y2_min = quantile(exp_chance, 0.1),
+     y2_max = quantile(exp_chance, 0.9),
+     
+     y3_min = quantile(exp_chance, 0.2),
+     y3_max = quantile(exp_chance, 0.8),
+     
+     y4_min = quantile(exp_chance, 0.3),
+     y4_max = quantile(exp_chance, 0.7),
+     
+     y5_min = quantile(exp_chance, 0.4),
+     y5_max = quantile(exp_chance, 0.6)
+   ) %>%
+   gather(y1_min:y5_max, key = ribbon, value = y) %>%
+   separate(ribbon, into = c("rib_band", "minmax")) %>%
+   spread(minmax, y)  -> df_ribbon
+
+plt <- ggplot()
+plt <- plt + geom_line(data = plt_acc_2,
+                       aes(x = delta, y = mean_acc,
+                           group = interaction(truck_perf, strategy),
+                           linetype = strategy,
+                           colour = truck_perf),
+                       size = 1)
+plt <- plt + scale_linetype_manual(values = c("twodash", "longdash"))
+plt <- plt + geom_ribbon(data = df_ribbon,
+                         aes(x = delta, 
+                             ymin = min, 
+                             ymax = max,
+                             group = interaction(rib_band, truck_perf),
+                             fill = truck_perf),
+                         alpha = 0.6)
+plt <- plt + scale_colour_manual(values = c("#CCDDAA","#BBCCEE"))
+plt <- plt + scale_fill_manual(values = c("#CCDDAA","#BBCCEE"))
+plt <- plt + facet_wrap(~truck_perf)
+plt <- plt + theme(strip.text.x = element_blank(),
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank())
+plt
+
+
+
 #### PLOT: placement by furthest and closest, and Condition ####
 # plot of placement position
 
