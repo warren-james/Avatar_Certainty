@@ -290,10 +290,11 @@ plt <- plt + geom_ribbon(data = df_ribbon,
                              ymax = max,
                              group = interaction(rib_band, truck_perf),
                              fill = truck_perf),
-                         alpha = 0.6)
+                         alpha = 0.3)
 plt <- plt + scale_colour_manual(values = c("#CCDDAA","#BBCCEE"))
 plt <- plt + scale_fill_manual(values = c("#CCDDAA","#BBCCEE"))
 plt <- plt + facet_wrap(~truck_perf)
+plt <- plt + theme_bw()
 plt <- plt + theme(strip.text.x = element_blank(),
                    panel.grid.major = element_blank(),
                    panel.grid.minor = element_blank())
