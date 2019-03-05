@@ -4,9 +4,16 @@ function Firetruck
 % - Distribution of Speed has two settings 
 %   - 1: Randomly Uniform. All speeds equally likely
 %   - 2: Hard cutoff. Set speed
-% - Experiment Type 
+% - Distribution setup in dialogue box
+%   - 1 = Constant to Variable
+%   - 2 = Constant to Restricted range
+%   - 3 = Restricted Range to Variable
+% - Condition
 %   - 1: Abstract. Just using squares
 %   - 2: Meaning. Uses Firetrucks and buildings 
+% - Measure type 
+%   - 1: Frequency 
+%   - 2: Confidence
 
 %% Check some stuff
 % do we want to make it so that everyone has the same number of distances?
@@ -24,37 +31,58 @@ addpath('images/Truck_version')
 %% Get Participant info %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 % dialogue prompt box 
-prompt = {'Enter Participant ID: ', 'Shape (1 or 2)', 'Condition (1 or 2)'};
+% experiment details
+prompt = {'Enter Participant ID: ','Distribution','Order','Condition','Measure type'};
 title = 'Input';
 num_lines = 1;
-defaults = {'99','1','2'}; % setting condition default to 2 so it uses the firetruck
+defaults = {'99','1','1','2','1'}; % setting condition default to 2 so it uses the firetruck
 answer = inputdlg(prompt, title, num_lines, defaults);
 
-% use this information
+% record this
 ID = answer{1};
-trial.spread = str2num(answer{2}); %#ok<ST2NM>
-trial.condition_num = str2num(answer{3}); %#ok<ST2NM>
+trial.spread = str2num(answer{2});        %#ok<ST2NM>
+trial.cond_order = str2num(answer{3});    %#ok<ST2NM>
+trial.condition_num = str2num(answer{4}); %#ok<ST2NM>
+trial.measure = str2num(answer{5});       %#ok<ST2NM>
+
+% demographics 
+prompt = {'Age', 'Gender', 'Dominant-Hand', 'Major'};
+title = 'Input';
+num_lines = 1;
+defaults = {'', '', '', ''}; % setting condition default to 2 so it uses the firetruck
+answer = inputdlg(prompt, title, num_lines, defaults);
+
+% record this
+demo.age = str2num(answer{1});  %#ok<ST2NM>
+demo.gender = answer{2};
+demo.hand = answer{3};
+demo.major = answer{4};
 
 % set filename
 filename.demo_phase = strcat('results/', ID, '_demophase.txt');
 filename.enddat = strcat('results/', ID, '_enddat.txt');
-% filename.estimates = strcat('results/', ID, '_estimates.txt');
 filename.clickhist = strcat('results/',ID, '_clickhist.txt');
-filename.confidence = strcat('results/',ID,'_confidence.txt');
 
 % open files to write into
 file.demo_phase = fopen(filename.demo_phase, 'w');
 file.enddata = fopen(filename.enddat, 'w');
-% file.estimates = fopen(filename.estimates, 'w');
 file.clickhist = fopen(filename.clickhist, 'w');
-file.confidence = fopen(filename.confidence, 'w');
 
 % specify colnames
 fprintf(file.demo_phase, 'Spread,Trial,Delta,Success\n');
 fprintf(file.enddata, 'Condition,Spread,Block,Trial,Delta,RT,Initial_x,Placed_x,Target_side,Speed,Success\n');
-% fprintf(file.estimates, 'Spread,Delta, Estimate\n');
 fprintf(file.clickhist, 'Spread,Block,Trial,Time_elapsed,Delta,click_num,Placed_x\n');
-fprintf(file.confidence, 'Spread,Delta,Y_or_N,Confidence\n');
+
+% check measure type and setup appropriate files
+if trial.measure == 1
+    filename.estimates = strcat('results/', ID, '_estimates.txt');
+    file.estimates = fopen(filename.estimates, 'w');
+    fprintf(file.estimates, 'Spread,Delta, Estimate\n');
+else
+    filename.confidence = strcat('results/',ID,'_confidence.txt');
+    file.confidence = fopen(filename.confidence, 'w');
+    fprintf(file.confidence, 'Spread,Delta,Y_or_N,Confidence\n');
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Get Screen information and set some parameters %%
@@ -95,16 +123,16 @@ params.step = round(params.deltamax - params.deltamin)/3;
 params.delta = params.deltamin:params.step:params.deltamax; % set of deltas
 
 % block and trial info
-params.nBlocks = 2; % this has to be even
-params.reps = 15;
-params.repsestimate = 10; 
+params.nBlocks = 2;       % 2 
+params.reps = 3;         % 15
+params.repsestimate = 1; % 10
 
 % for moving object settings 
 % get frame duration 
 anim.ifi = Screen('GetFlipInterval', params.stimuliScrn);
 
 % box properties 
-box.Rect = [0 0 100 50];                                         % Shape of box
+box.Rect = [0 0 100 50];                                        % Shape of box
 box.spray = [0 0 90 30];                                        % Range
 box.startx = params.centre_x;                                   % for offsetting
 box.starty = params.centre_y;                                   % vertical centre
@@ -112,6 +140,8 @@ box.movetime = 100;                                             % travel time
 box.delay = round(box.movetime/5) - 1;                          % delay before movement
 box.avgspeed = round(median(params.delta)/(box.movetime - 20)); % average speed, might not need
 box.maxspeed = ceil(max(params.delta)/(box.movetime)) - 1;      % max speed
+
+% for the confidence judgements 
 box.judgeline = [0 0 params.centre_x 15];
 box.judgebox = [0 0 15 45];
 
@@ -138,12 +168,46 @@ HideCursor;
 
 % check condition entered and set box speed distribution
 % ditribution settings
-if trial.spread == 1
-    box.speed_beta = [1 1; 10000 10000]; % rand unif
-    box.speed_desc = {'unreliable' 'reliable'};
-elseif trial.spread == 2
-    box.speed_beta = [10000 10000; 1 1]; % hard cutoff
-    box.speed_desc = {'reliable', 'unreliable'};
+if trial.cond_order == 1
+    % variable then constant
+    if trial.spread == 1
+        box.speed_beta = [1 1; 10000 10000]; 
+        box.speed_desc = {'variable' 'constant'};
+        box.range = [box.maxspeed, box.maxspeed];
+        box.minspeed = [1 1];
+    % variable then restricted   
+    elseif trial.spread == 2
+        box.speed_beta = [1 1; 1 1]; 
+        box.speed_desc = {'variable' 'restricted'};  
+        box.range = [box.maxspeed, box.maxspeed/2]; 
+        box.minspeed = [1 box.maxspeed/4];
+    % constant then restricted
+    elseif trial.spread == 3
+        box.speed_beta = [10000 10000; 1 1]; 
+        box.speed_desc = {'constant' 'restricted'};  
+        box.range = [box.maxspeed, box.maxspeed/2]; 
+        box.minspeed = [1 box.maxspeed/4];
+    end
+elseif trial.cond_order == 2
+    % constant then variable
+    if trial.spread == 1
+        box.speed_beta = [10000 10000; 1 1]; 
+        box.speed_desc = {'constant' 'variable'};
+        box.range = [box.maxspeed, box.maxspeed];
+        box.minspeed = [1 1];
+    % restricted then variable
+    elseif trial.spread == 2
+        box.speed_beta = [1 1; 1 1]; 
+        box.speed_desc = {'restricted' 'variable'};  
+        box.range = [box.maxspeed/2, box.maxspeed]; 
+        box.minspeed = [box.maxspeed/4 1];
+    % restricted then constant
+    elseif trial.spread == 3
+        box.speed_beta = [1 1; 10000 10000]; 
+        box.speed_desc = {'restricted' 'constant'};  
+        box.range = [box.maxspeed, box.maxspeed/2]; 
+        box.minspeed = [box.maxspeed/4 1];
+    end
 end
 
 % sort out indexing part
@@ -154,7 +218,7 @@ box.speed_order = box.speed_order(:)';
 % % plot to see what this looks like
 % x = 0:0.01:1;
 % y = betapdf(x, box.speed_beta(1), box.speed_beta(2));
-% plot(x*7+1,y)
+% plot(x*box.range+box.minspeed,y)
 
 % which avatar is used
 if trial.condition_num == 1
@@ -168,14 +232,14 @@ end
 % set up the blending part for alpha
 Screen('BlendFunction',params.stimuliScrn,'GL_SRC_ALPHA','GL_ONE_MINUS_SRC_ALPHA');
 
-% read in images 
+% read in images
 if strcmp(trial.condition, 'square')
-    % fire truck 
+    % fire truck
     [pict,~,alpha] = imread('images/Abstract_version/Fire_truck.png');
     pict(:,:,4) = alpha;
     box.png.Fire_truck = Screen('MakeTexture', params.stimuliScrn, pict);
     
-    % placed truck 
+    % placed truck
     [pict,~,alpha] = imread('images/Abstract_version/Placed_truck.png');
     pict(:,:,4) = alpha;
     box.png.Placed_truck = Screen('MakeTexture', params.stimuliScrn, pict);
@@ -184,7 +248,7 @@ if strcmp(trial.condition, 'square')
     [pict,~,alpha] = imread('images/Abstract_version/Target_building.png');
     pict(:,:,4) = alpha;
     box.png.Building = Screen('MakeTexture', params.stimuliScrn, pict);
-
+    
     % Burning
     [pict,~,alpha] = imread('images/Abstract_version/Burning.png');
     pict(:,:,4) = alpha;
@@ -282,11 +346,14 @@ for block = 1:params.nBlocks
         Screen('Flip', params.stimuliScrn, 0);
         WaitSecs(1.0);
         KbWait;
+        % give trial info for truck 
+        trial.range = box.range(block);
+        trial.minspeed = box.minspeed(block);
+        
+        % observe speed phase
         [demo_phase] = observe_speed(params, box, anim, trial, demo_phase);
         
         % show quick demo
-        
-        
         % only do the demo on for the first block
         if block == 1
             if strcmp(trial.condition, 'square')
@@ -301,7 +368,7 @@ for block = 1:params.nBlocks
         end
         
         % run actual experiment
-        DrawFormattedText(params.stimuliScrn, 'Press the spacebar to start the block', 'center', params.centre_y-250, [], round(params.x_res/15));
+        DrawFormattedText(params.stimuliScrn, 'The task will now start. \n Press the spacebar to start the block', 'center', params.centre_y-250, [], round(params.x_res/15));
         Screen('flip', params.stimuliScrn, 0);
         WaitSecs(1.0);
         KbWait;
@@ -383,19 +450,22 @@ for block = 1:params.nBlocks
         
         % now the estimating part is about to begin
         if strcmp(trial.condition, 'truck')
-            DrawFormattedText(params.stimuliScrn, ['You are halfway there! In this half, you prevented ' num2str(round(num_success)) '% of the buildings from burning down! There is one last task before you move onto the next half. For this, you will be asked to state whether the ' trial.condition ' would reach the displayed ' trial.target ' and then provide an indication of how certain you are in your choice. /n Whenever you''re ready, press the spacebar to start the last task.'], 'center', params.centre_y-250, [], round(params.x_res/15));
+            DrawFormattedText(params.stimuliScrn, ['You are halfway there! In this half, you prevented ' num2str(round(num_success)) '% of the buildings from burning down! There is one last task before you move onto the next half. For this, you will be asked to state whether the ' trial.condition ' would reach the displayed ' trial.target ' and then provide an indication of how certain you are in your choice. Whenever you''re ready, press the spacebar to start the last task.'], 'center', params.centre_y-250, [], round(params.x_res/15));
         else
-            DrawFormattedText(params.stimuliScrn, ['You are halfway there! In this half, you reached ' num2str(round(num_success)) '% of the targets in time! \n There is one last task before you move onto the next half. For this, you will be asked to state whether the ' trial.condition ' would reach the displayed ' trial.target ' and then provide an indication of how certain you are in your choice.  /n Whenever you''re ready, press the spacebar to start the last task.'], 'center', params.centre_y-250, [], round(params.x_res/15));
+            DrawFormattedText(params.stimuliScrn, ['You are halfway there! In this half, you reached ' num2str(round(num_success)) '% of the targets in time! \n There is one last task before you move onto the next half. For this, you will be asked to state whether the ' trial.condition ' would reach the displayed ' trial.target ' and then provide an indication of how certain you are in your choice. Whenever you''re ready, press the spacebar to start the last task.'], 'center', params.centre_y-250, [], round(params.x_res/15));
         end
         Screen('Flip', params.stimuliScrn, 0);
         WaitSecs(1);
         KbWait();
         
-        % Get participant estimates
-        % [estimates] = estimate_function(estimates, params, box, anim, keys, trial);
-        
-        % Get confidence 
-        [confidence_data] = confidence_function(confidence_data, params, box, anim, keys, trial, mouse);
+        % check trial.measure 
+        if trial.measure == 1
+            % Get participant estimates
+            [estimates] = estimate_function(estimates, params, box, anim, keys, trial);
+        else
+            % Get confidence
+            [confidence_data] = confidence_function(confidence_data, params, box, anim, keys, trial, mouse);
+        end
         
         % tell participant we're going to a new block of decisions
         if strcmp(trial.condition, 'truck')
@@ -403,13 +473,14 @@ for block = 1:params.nBlocks
         else
             DrawFormattedText(params.stimuliScrn, 'You will now do the same as before, except this time the square will behave differently. So, before you start making decisions again, you will have the opportunity to relearn its performance. \n Press the spacebar to continue', 'center', params.centre_y-250, [], round(params.x_res/15));
         end
+        
         Screen('Flip', params.stimuliScrn, 0);
         WaitSecs(1);
         KbWait();
         
     elseif block == params.nBlocks
         % get success rate
-        num_success = (sum(enddata((params.nBlocks/2)*params.reps*length(params.delta):end,end))/length(enddata((params.nBlocks/2)*params.reps*length(params.delta):end,end)))*100;
+        num_success = (sum(enddata((params.nBlocks/2)*params.reps*length(params.delta)+1:end,end))/length(enddata((params.nBlocks/2)*params.reps*length(params.delta)+1:end,end)))*100;
         
         % now the estimating part is about to begin
         if strcmp(trial.condition, 'truck')
@@ -421,12 +492,14 @@ for block = 1:params.nBlocks
         WaitSecs(1);
         KbWait();
         
-        % Get participant estimates
-        % [estimates] = estimate_function(estimates, params, box, anim, keys, trial);
-        
-        % Get confidence 
-        [confidence_data] = confidence_function(confidence_data, params, box, anim, keys, trial, mouse);
-        
+        % check trial.measure 
+        if trial.measure == 1
+            % Get participant estimates
+            [estimates] = estimate_function(estimates, params, box, anim, keys, trial);
+        else
+            % Get confidence
+            [confidence_data] = confidence_function(confidence_data, params, box, anim, keys, trial, mouse);
+        end
     end
 end
 
@@ -457,6 +530,7 @@ vals.box.maxspeed = box.maxspeed;
 vals.box.speed_beta = box.speed_beta;
 vals.box.movetime = box.movetime;
 vals.box.spray = box.spray(4);
+vals.box.speed_desc = box.speed_desc;
 vals.params.centre_x = params.centre_x;
 vals.params.centre_y = params.centre_y;
 vals.params.delta = params.delta;
@@ -465,17 +539,27 @@ vals.params.refresh = anim.ifi; %#ok<STRNU>
 % save this
 save(strcat('results/', ID, '_vals'), '-struct', 'vals');
 
-% estimates
-% fprintf(file.estimates,'%d,%d,%d\n',estimates');
-% fclose(file.estimates);
+% save demographics 
+demo.age = str2num(answer{1});  %#ok<ST2NM>
+demo.gender = answer{2};
+demo.hand = answer{3};
+demo.major = answer{4};
+save(strcat('results/', ID, '_demo'), '-struct', 'demo');
 
 % clickhist 
 fprintf(file.clickhist, '%d,%d,%d,%1.3f,%d,%d,%d\n', clickhist');
 fclose(file.clickhist);
 
-% confidence 
-fprintf(file.confidence, '%d,%1.3f,%d,%d\n', confidence_data');
-fclose(file.confidence);
+% save appropriate measure
+if trial.measure == 1
+    % estimates
+    fprintf(file.estimates,'%d,%d,%d\n',estimates');
+    fclose(file.estimates);
+else
+    % confidence
+    fprintf(file.confidence, '%d,%1.3f,%d,%d\n', confidence_data');
+    fclose(file.confidence);
+end
 
 % close screen
 sca
@@ -1062,7 +1146,7 @@ end
 
 function [box] = GetSpeed(box, trial)
 % speed value
-speedvalue = betarnd(box.speed_beta(box.speed_order(trial.block),1), box.speed_beta(box.speed_order(trial.block),2))*box.maxspeed + 1;
+speedvalue = betarnd(box.speed_beta(box.speed_order(trial.block),1), box.speed_beta(box.speed_order(trial.block),2))*trial.range + trial.minspeed;
 
 % this part controls it so that in the certain condition
 % the box will always travel the same speed

@@ -33,22 +33,21 @@ load("scratch/data/df_decisions")
 
 # make model data 
 model_data <- df_decisions %>%
-  mutate(Abs_Norm_pos = abs(Placed_x/Delta))
+  mutate(Abs_Norm_pos = abs(placed_x/delta))
 
 # add in binary predictors for stan modelling 
 # condition
 model_data$cnd_rand <- 1
-model_data$cnd_rand[model_data$truck_perf == "Highly_Certain"] <- 0
+model_data$cnd_rand[model_data$truck_perf == "Constant"] <- 0
 
 # reduce down columns 
 model_data <- model_data %>%
-  select(-Condition,
-         -Spread, 
-         -Initial_x,
-         -Speed,
-         -Success,
-         -standard) %>% # only for now
-  mutate(Norm_Delta = Delta/max(Delta)) %>%
+  select(-condition,
+         -spread, 
+         -initial_x,
+         -speed,
+         -success) %>% # only for now
+  mutate(Norm_Delta = delta/max(delta)) %>%
   filter(Abs_Norm_pos < 1.01)
 
 
@@ -61,32 +60,32 @@ load("scratch/data/df_estimates")
 
 # so sort that 
 temp <- df_estimates %>%
-  filter(Estimate_Type == "Participant") %>%
-  group_by(Participant, truck_perf, Delta) %>%
-  summarise(Estimate = mean(Estimate)) %>%
-  spread(truck_perf, Estimate) %>%
-  ggplot(aes(Random_Uniform, Highly_Certain, 
-             colour = Delta)) + 
+  filter(estimate_type == "Participant") %>%
+  group_by(participant, truck_perf, delta) %>%
+  summarise(estimate = mean(estimate)) %>%
+  spread(truck_perf, estimate) %>%
+  ggplot(aes(Constant, Variable, 
+             colour = delta)) + 
   geom_point() + 
   geom_smooth(method = "glm",
               method.args = list(family = "binomial"),
               se = F) + 
-  facet_wrap(~Participant)
+  facet_wrap(~participant)
  temp 
 
 # get the R^2 values 
-for(p in unique(df_estimates$Participant)){
-  # subset
-  ss <- df_estimates[df_estimates$Participant == p,]
-  # linear model 
-  check_cor <- glm(Estimate ~ (Delta + truck_perf)^2,
-                   data = ss,
-                   family = "binomial")
-  # get R^2 value
-  rsqr <- summary(check_cor)$r.squared
-  print(rsqr)
-  
-}
+# for(p in unique(df_estimates$participant)){
+#   # subset
+#   ss <- df_estimates[df_estimates$participant == p,]
+#   # linear model 
+#   check_cor <- glm(estimate ~ (delta + truck_perf)^2,
+#                    data = ss,
+#                    family = "binomial")
+#   # get R^2 value
+#   rsqr <- summary(check_cor)$r.squared
+#   print(rsqr)
+#   
+# }
 #### Models ####
 #### Placement as predicted variable ####
 #### place_m1: Norm_placement ~ Delta ####
