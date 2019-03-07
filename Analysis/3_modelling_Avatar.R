@@ -107,6 +107,9 @@ df_estimates %>%
 # add in to model_data 
 model_data <- merge(model_data, df_slope_diff)
 
+# save this 
+save(model_data, file = "scratch/data/model_data")
+
 #### Models ####
 #### Placement as predicted variable ####
 #### place_m1: Norm_placement ~ Delta ####
