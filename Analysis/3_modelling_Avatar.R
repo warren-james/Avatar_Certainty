@@ -33,7 +33,10 @@ load("scratch/data/df_decisions")
 
 # make model data 
 model_data <- df_decisions %>%
-  mutate(Abs_Norm_pos = abs(placed_x/delta))
+  mutate(Abs_Norm_pos = abs(placed_x/delta)) %>%
+  group_by(truck_perf) %>%
+  mutate(num_speeds = length(unique(speed))) %>%
+  ungroup()
 
 # add in binary predictors for stan modelling 
 # condition
@@ -58,34 +61,52 @@ load("scratch/data/df_estimates")
 # first want to look at the correlation of estimates accross condition 
 # within in each participant 
 
-# so sort that 
-temp <- df_estimates %>%
-  filter(estimate_type == "Participant") %>%
-  group_by(participant, truck_perf, delta) %>%
-  summarise(estimate = mean(estimate)) %>%
-  spread(truck_perf, estimate) %>%
-  ggplot(aes(Constant, Variable, 
-             colour = delta)) + 
-  geom_point() + 
-  geom_smooth(method = "glm",
-              method.args = list(family = "binomial"),
-              se = F) + 
-  facet_wrap(~participant)
- temp 
+# get a value to show how similar slopes are....
+# This models each participants estimates for the different 
+# conditions, then gets a value about how similar they are.
+# numbers closer to 0 better? 
+# setup data frame to record this 
+df_slope_diff <- data.frame(participant = character(),
+                            difference = numeric())
 
-# get the R^2 values 
-# for(p in unique(df_estimates$participant)){
-#   # subset
-#   ss <- df_estimates[df_estimates$participant == p,]
-#   # linear model 
-#   check_cor <- glm(estimate ~ (delta + truck_perf)^2,
-#                    data = ss,
-#                    family = "binomial")
-#   # get R^2 value
-#   rsqr <- summary(check_cor)$r.squared
-#   print(rsqr)
-#   
-# }
+# run loop
+for(p in unique(df_estimates$participant)){
+  # subset
+  ss <- df_estimates[df_estimates$participant == p,]
+  ss$delta2 <- ss$delta/max(ss$delta)
+  # make quick model 
+  model <- glm(estimate ~ truck_perf * delta2,
+               data = ss,
+               family = "binomial")
+  
+  # get estimate of different fits
+  m.model <- lsmeans::lstrends(model, "truck_perf", var = "delta2")
+  
+  # get number to show how well correlated the estimates are 
+  num <- summary(pairs(m.model))
+  num <- num$estimate
+  
+  # store this 
+  df_slope_diff <- rbind(df_slope_diff, data.frame(participant = p,
+                                                   difference = num))
+}
+
+# plt just as a quick check 
+df_estimates %>%
+  ggplot(aes(delta,
+             estimate,
+             colour = truck_perf)) +
+  geom_smooth(method = glm,
+              method.args = list(family = "binomial"),
+              se = F) +
+  facet_wrap(~participant)
+
+# probably want to combine this with the model data so it can be 
+# used as a predictor... if we decide to use it?
+
+# add in to model_data 
+model_data <- merge(model_data, df_slope_diff)
+
 #### Models ####
 #### Placement as predicted variable ####
 #### place_m1: Norm_placement ~ Delta ####
@@ -93,18 +114,43 @@ temp <- df_estimates %>%
 # nothing else, just the one predictor 
 
 # quick brms version 
-model_brms_1 <- brm(Abs_Norm_pos ~ Norm_Delta,
+place_brms_1 <- brm(Abs_Norm_pos ~ Norm_Delta,
                     data = model_data,
                     family = "beta",
                     iter = 2000,
                     chains = 1,
                     cores = 1)
+
+# save this 
+save(place_brms_1, file = "models/outputs/brms/place_brms_1")
+
+#### place_m1.1: add in rand intercepts ####
+place_brms_1.1 <- brm(Abs_Norm_pos ~ Norm_Delta + (1|participant),
+                      data = model_data,
+                      family = "beta",
+                      iter = 2000,
+                      chains = 1,
+                      cores = 1)
+
+# save this 
+save(place_brms_1.1, file = "models/outputs/brms/place_brms_1.1")
+
+#### place_m1.2: add in rand slopes ####
+place_brms_1.2 <- brm(Abs_Norm_pos ~ Norm_Delta + (1 + Norm_Delta|participant),
+                      data = model_data,
+                      family = "beta",
+                      iter = 2000,
+                      chains = 1,
+                      cores = 1)
+
+# save this 
+save(place_brms_1.2, file = "models/outputs/brms/place_brms_1.2")
 
 #### place_m2: Norm_placement ~ Delta + Condition ####
 # add in the condition variable as a main effect 
 
 # quick brms version 
-model_brms_2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf,
+place_brms_2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf,
                     data = model_data,
                     family = "beta",
                     iter = 2000,
@@ -112,17 +158,70 @@ model_brms_2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf,
                     cores = 1)
 
 
+#### place_m2.1: add in rand intercepts ####
+place_brms_2.1 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + (1|participant),
+                      data = model_data,
+                      family = "beta",
+                      iter = 2000,
+                      chains = 1,
+                      cores = 1)
+
+#### place_m2.2: add in rand slopes ####
+place_brms_2.2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + (1 + Norm_Delta|participant),
+                      data = model_data,
+                      family = "beta",
+                      iter = 2000,
+                      chains = 1,
+                      cores = 1)
+
+
 #### place_m3: Norm_placement ~ (Delta + Condition)^2 ####
 # main effects and interactions of Delta and Condition
-
+ 
 # quick brms version 
-model_brms_3<- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2,
+place_brms_3 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2,
                    data = model_data,
                    family = "beta",
                    iter = 2000,
                    chains = 1,
                    cores = 1)
 
+#### place_m3.1: add in rand intercepts ####
+place_brms_3.1 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 + (1|participant),
+                      data = model_data,
+                      family = "beta",
+                      iter = 2000,
+                      chains = 1,
+                      cores = 1)
+
+#### place_m3.2: add in rand slopes ####
+place_brms_3.2 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 +
+                        (1 + Norm_Delta*truck_perf|participant),
+                      data = model_data,
+                      family = "beta",
+                      iter = 2000,
+                      chains = 1,
+                      cores = 1)
+
+# same again but with using num_speed
+# model_brms_3.1 <- brm(Abs_Norm_pos ~ (Norm_Delta + num_speeds)^2,
+#                      data = model_data,
+#                      family = "beta",
+#                      iter = 2000,
+#                      chains = 1,
+#                      cores = 1)
+ 
+#### temp model: Norm_place ~ (Delta + Condition)^2 + Condition*difference ####
+# not sure if this is the right way to do this... 
+# we're more interested in the difference of the slope... right? 
+# maybe we want the 3 way interaction?
+# quick brms version
+# model_brms_4 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 + truck_perf*Norm_Delta*difference, 
+#                     data = model_data, 
+#                     family = "beta",
+#                     iter = 2000,
+#                     chains = 1,
+#                     cores = 1)
 
 #### place_m4: Norm_placement ~ Delta + Condition + Order ####
 # add in the main effect of order

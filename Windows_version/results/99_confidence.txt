@@ -1,0 +1,1 @@
+Spread,Delta,Y_or_N,Confidence
