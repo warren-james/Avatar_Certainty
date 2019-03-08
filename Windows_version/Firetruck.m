@@ -321,9 +321,9 @@ block_count = 1;
 
 % make intro screen
 if strcmp(trial.condition, 'square')
-    DrawFormattedText(params.stimuliScrn, 'Welcome to the experiment. Your task is to ensure that the red square reaches its target as many times as possible by placing it between two other squares presented on the screen. They are both equally likely to be the target on every trial. \n \n Press space to continue.', 'center', params.centre_y*0.5, [], round(params.x_res/15));
+    DrawFormattedText(params.stimuliScrn, 'Welcome to the experiment. Your task is to ensure that the red square reaches its target so as to prevent it from turning black by choosing where to place the red square. There will be two Brown squares presented on screen, after choosing where to place the red square, one of them will turn orange. If you are successful it will return to Brown, if not, it will turn black. They are both equally likely to be the target on every trial. \n \n Press space to continue.', 'center', params.centre_y*0.5, [], round(params.x_res/15));
 else
-    DrawFormattedText(params.stimuliScrn, 'Welcome to the experiment. In this task, there will be buildings, one of which will catch. You are to prevent as many of these buildings as possible from burning down by placing a Firetruck between the two buildings that are both equally likely to catch fire. \n \n \n Press space to continue.', 'center', params.centre_y*0.5, [], round(params.x_res/15));
+    DrawFormattedText(params.stimuliScrn, 'Welcome to the experiment. In this task, there will be buildings, one of which will catch fire. You are to prevent as many of these buildings as possible from burning down by choosing where to place the Firetruck. Both buildings are equally likely to catch fire. \n \n \n Press space to continue.', 'center', params.centre_y*0.5, [], round(params.x_res/15));
 end
 Screen('Flip', params.stimuliScrn, 0);
 WaitSecs(1.0);
@@ -963,7 +963,7 @@ to_draw.offsets_y = [params.centre_y params.centre_y newstart.y];
 
 % draw text
 if strcmp(trial.condition, 'square')
-    DrawFormattedText(params.stimuliScrn, 'For every trial, you will see two potential targets (BROWN squares). Each is equally likely to become the target on every trial. Your task is to place the RED square between these two targets to give it the best chance of successfully reaching the true target. \n \n Press space to continue' , 'center', params.centre_y*0.5, [], round(params.x_res/15));    
+    DrawFormattedText(params.stimuliScrn, 'For every trial, you will see two potential targets (BROWN squares). Each is equally likely to become the target on every trial which will turn Orange. Your task is to choose somewhere place the RED square so as to give it the best chance of successfully reaching the true target. \n \n Press space to continue' , 'center', params.centre_y*0.5, [], round(params.x_res/15));    
 else
     DrawFormattedText(params.stimuliScrn, 'For every trial, you will see two buildings. Each building is equally likely to catch fire soon. Your job is to park the truck somewhere between the two buildings to give it the best chance of reaching the building that has caught fire. \n \n Press space to continue' , 'center', params.centre_y*0.5, [], round(params.x_res/15));    
 end
@@ -983,7 +983,7 @@ arrowpath.start_y = params.centre_y;
 arrowpath.x = [repmat(3,1,round(dist/9)) 0 repmat(3,1,round(dist/9)) 0 repmat(-3,1,round(dist/3/3)) 0 repmat(3,1,round(dist/3/3)) 0 repmat(-3,1,round(dist/9)) 0 0];
 
 while anim.carryon == true
-    DrawFormattedText(params.stimuliScrn, ['You can place the ' trial.condition ' by clicking somewhere between the two ' trial.target 's.'], 'center', params.centre_y*0.5, [], round(params.x_res/15));
+    DrawFormattedText(params.stimuliScrn, ['You can place the ' trial.condition ' by clicking somewhere on screen level with the targets.'], 'center', params.centre_y*0.5, [], round(params.x_res/15));
 
     % increase anim.move to index into arrowpath
     anim.move = anim.move + 1;
@@ -1089,7 +1089,7 @@ for dist = delta.deltas
     chance = 5;
     
     % display this part 
-    DrawFormattedText(params.stimuliScrn, ['How many times out of 10 would the ' trial.condition ' reach the displayed target? \n Use the up and down arrow keys to raise or lower the value. \n Press the space bar when you have decided.'], 'center', params.centre_y*0.5);
+    DrawFormattedText(params.stimuliScrn, ['How many times out of 10 would the ' trial.condition ' reach the displayed target in time? \n Use the up and down arrow keys to raise or lower the value. \n Press the space bar when you have decided.'], 'center', params.centre_y*0.5);
     DrawFormattedText(params.stimuliScrn, [num2str(chance) ' out of 10 times'], 'center', params.centre_y + 100);
     for iter = 1:length(to_draw.objects)
        where_box = CenterRectOnPoint(box.Rect, to_draw.offsets(iter), params.centre_y);
@@ -1212,7 +1212,7 @@ for dist = delta.deltas
     
     % display this part 
     % draw some text
-    DrawFormattedText(params.stimuliScrn, ['Do you think the ' trial.condition ' would reach the displayed ' trial.target '? \n Press "y" for Yes and "n" for No'], 'center', params.centre_y*0.5);
+    DrawFormattedText(params.stimuliScrn, ['Do you think the ' trial.condition ' would reach the displayed ' trial.target ' in time? \n Press "y" for Yes and "n" for No'], 'center', params.centre_y*0.5);
     % Draw boxes
     for iter = 1:length(to_draw.objects)
         where_box = CenterRectOnPoint(box.Rect, to_draw.offsets(iter), params.centre_y);
@@ -1230,7 +1230,7 @@ for dist = delta.deltas
         [~,~,keyCode] = KbCheck;
         
         % draw some text
-        DrawFormattedText(params.stimuliScrn, ['Do you think the ' trial.condition ' would reach the displayed ' trial.target '? \n Press "y" for Yes and "n" for No'], 'center', params.centre_y*0.5);
+        DrawFormattedText(params.stimuliScrn, ['Do you think the ' trial.condition ' would reach the displayed ' trial.target 'in time? \n Press "y" for Yes and "n" for No'], 'center', params.centre_y*0.5);
         % Draw boxes
         for iter = 1:length(to_draw.objects)
             where_box = CenterRectOnPoint(box.Rect, to_draw.offsets(iter), params.centre_y);
