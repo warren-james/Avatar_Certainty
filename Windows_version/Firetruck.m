@@ -124,8 +124,8 @@ params.delta = params.deltamin:params.step:params.deltamax; % set of deltas
 
 % block and trial info
 params.nBlocks = 2;       % 2 
-params.reps = 3;         % 15
-params.repsestimate = 1; % 10
+params.reps = 15;         % 15
+params.repsestimate = 10; % 10
 
 % for moving object settings 
 % get frame duration 
