@@ -29,10 +29,10 @@ travel_time <- 100
 #### Any Functions ####
 
 #### Load in data ####
-load("scratch/data/df_decisions")
+load("scratch/data/df_Essex_decisions")
 
 # make model data 
-model_data <- df_decisions %>%
+model_pilot_data <- df_Essex_decisions %>%
   mutate(Abs_Norm_pos = abs(placed_x/delta)) %>%
   group_by(truck_perf) %>%
   mutate(num_speeds = length(unique(speed))) %>%
@@ -40,11 +40,11 @@ model_data <- df_decisions %>%
 
 # add in binary predictors for stan modelling 
 # condition
-model_data$cnd_rand <- 1
-model_data$cnd_rand[model_data$truck_perf == "Constant"] <- 0
+model_pilot_data$cnd_rand <- 1
+model_pilot_data$cnd_rand[model_pilot_data$truck_perf == "Constant"] <- 0
 
 # reduce down columns 
-model_data <- model_data %>%
+model_pilot_data <- model_pilot_data %>%
   select(-condition,
          -spread, 
          -initial_x,
@@ -104,11 +104,11 @@ df_estimates %>%
 # probably want to combine this with the model data so it can be 
 # used as a predictor... if we decide to use it?
 
-# add in to model_data 
-model_data <- merge(model_data, df_slope_diff)
+# add in to model_pilot_data 
+model_pilot_data <- merge(model_pilot_data, df_slope_diff)
 
 # save this 
-save(model_data, file = "scratch/data/model_data")
+save(model_pilot_data, file = "scratch/data/model_pilot_data")
 
 #### Models ####
 #### Placement as predicted variable ####
@@ -117,110 +117,113 @@ save(model_data, file = "scratch/data/model_data")
 # nothing else, just the one predictor 
 
 # quick brms version 
-place_brms_1 <- brm(Abs_Norm_pos ~ Norm_Delta,
-                    data = model_data,
-                    family = "beta",
-                    iter = 2000,
-                    chains = 1,
-                    cores = 1)
+place_pilot_brms_1 <- brm(Abs_Norm_pos ~ Norm_Delta,
+                          data = model_pilot_data,
+                          family = "beta",
+                          iter = 2000,
+                          chains = 1,
+                          cores = 1)
 
 # save this 
-save(place_brms_1, file = "models/outputs/brms/place_brms_1")
+save(place_pilot_brms_1, file = "models/outputs/brms/place_pilot_brms_1")
 
 #### place_m1.1: add in rand intercepts ####
-place_brms_1.1 <- brm(Abs_Norm_pos ~ Norm_Delta + (1|participant),
-                      data = model_data,
-                      family = "beta",
-                      iter = 2000,
-                      chains = 1,
-                      cores = 1)
+place_pilot_brms_1.1 <- brm(Abs_Norm_pos ~ Norm_Delta + (1|participant),
+                            data = model_pilot_data,
+                            family = "beta",
+                            iter = 2000,
+                            chains = 1,
+                            cores = 1)
 
 # save this 
-save(place_brms_1.1, file = "models/outputs/brms/place_brms_1.1")
+save(place_pilot_brms_1.1, file = "models/outputs/brms/place_pilot_brms_1.1")
 
 #### place_m1.2: add in rand slopes ####
-place_brms_1.2 <- brm(Abs_Norm_pos ~ Norm_Delta + (1 + Norm_Delta|participant),
-                      data = model_data,
-                      family = "beta",
-                      iter = 2000,
-                      chains = 1,
-                      cores = 1)
+place_pilot_brms_1.2 <- brm(Abs_Norm_pos ~ Norm_Delta + (1 + Norm_Delta|participant),
+                            data = model_pilot_data,
+                            family = "beta",
+                            iter = 2000,
+                            chains = 1,
+                            cores = 1)
 
 # save this 
-save(place_brms_1.2, file = "models/outputs/brms/place_brms_1.2")
+save(place_pilot_brms_1.2, file = "models/outputs/brms/place_pilot_brms_1.2")
 
 #### place_m2: Norm_placement ~ Delta + Condition ####
 # add in the condition variable as a main effect 
 
 # quick brms version 
-place_brms_2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf,
-                    data = model_data,
-                    family = "beta",
-                    iter = 2000,
-                    chains = 1,
-                    cores = 1)
+place_pilot_brms_2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf,
+                          data = model_pilot_data,
+                          family = "beta",
+                          iter = 2000,
+                          chains = 1,
+                          cores = 1)
 
 
 #### place_m2.1: add in rand intercepts ####
-place_brms_2.1 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + (1|participant),
-                      data = model_data,
-                      family = "beta",
-                      iter = 2000,
-                      chains = 1,
-                      cores = 1)
+place_pilot_brms_2.1 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + (1|participant),
+                            data = model_pilot_data,
+                            family = "beta",
+                            iter = 2000,
+                            chains = 1,
+                            cores = 1)
 
 #### place_m2.2: add in rand slopes ####
-place_brms_2.2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + (1 + Norm_Delta|participant),
-                      data = model_data,
-                      family = "beta",
-                      iter = 2000,
-                      chains = 1,
-                      cores = 1)
+place_pilot_brms_2.2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + (1 + Norm_Delta|participant),
+                            data = model_pilot_data,
+                            family = "beta",
+                            iter = 2000,
+                            chains = 1,
+                            cores = 1)
 
 
 #### place_m3: Norm_placement ~ (Delta + Condition)^2 ####
 # main effects and interactions of Delta and Condition
- 
+
 # quick brms version 
-place_brms_3 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2,
-                   data = model_data,
-                   family = "beta",
-                   iter = 2000,
-                   chains = 1,
-                   cores = 1)
+place_pilot_brms_3 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2,
+                          data = model_pilot_data,
+                          family = "beta",
+                          iter = 2000,
+                          chains = 1,
+                          cores = 1)
+
+# save 
+save(place_pilot_brms_3, file = "models/outputs/brms/Pilot/place_pilot_brms_3")
 
 #### place_m3.1: add in rand intercepts ####
-place_brms_3.1 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 + (1|participant),
-                      data = model_data,
-                      family = "beta",
-                      iter = 2000,
-                      chains = 1,
-                      cores = 1)
+place_pilot_brms_3.1 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 + (1|participant),
+                            data = model_pilot_data,
+                            family = "beta",
+                            iter = 2000,
+                            chains = 1,
+                            cores = 1)
 
 #### place_m3.2: add in rand slopes ####
-place_brms_3.2 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 +
-                        (1 + Norm_Delta*truck_perf|participant),
-                      data = model_data,
-                      family = "beta",
-                      iter = 2000,
-                      chains = 1,
-                      cores = 1)
+place_pilot_brms_3.2 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 +
+                              (1 + Norm_Delta*truck_perf|participant),
+                            data = model_pilot_data,
+                            family = "beta",
+                            iter = 2000,
+                            chains = 1,
+                            cores = 1)
 
 # same again but with using num_speed
 # model_brms_3.1 <- brm(Abs_Norm_pos ~ (Norm_Delta + num_speeds)^2,
-#                      data = model_data,
+#                      data = model_pilot_data,
 #                      family = "beta",
 #                      iter = 2000,
 #                      chains = 1,
 #                      cores = 1)
- 
+
 #### temp model: Norm_place ~ (Delta + Condition)^2 + Condition*difference ####
 # not sure if this is the right way to do this... 
 # we're more interested in the difference of the slope... right? 
 # maybe we want the 3 way interaction?
 # quick brms version
 # model_brms_4 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 + truck_perf*Norm_Delta*difference, 
-#                     data = model_data, 
+#                     data = model_pilot_data, 
 #                     family = "beta",
 #                     iter = 2000,
 #                     chains = 1,

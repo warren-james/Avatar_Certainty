@@ -1,8 +1,9 @@
 library(tidyverse)
+library(ggthemes)
 
-load("scratch/data/df_decisions")
+load("scratch/data/df_Essex_decisions")
 
-df_decisions <- as.tibble(df_decisions)
+df_decisions <- as.tibble(df_Essex_decisions)
 
 
 # compute mean and var for each person and condition
@@ -61,10 +62,12 @@ plt <- ggplot(df2, aes(
 plt <- plt + geom_errorbar(colour = "gray") + geom_path()
 plt <- plt + scale_y_continuous(expand = c(0, 0))
 plt <- plt + scale_x_continuous(breaks = unique(df$delta))
+plt <- plt + scale_colour_ptol()
 plt <- plt + theme_bw()
+plt$labels$x <- "Delta (in pixels)"
+plt$labels$y <- "Variance"
+plt$labels$colour <- "Performance Condition"
 plt
-
-
 
 # anovas 
 pos_aov <- aov(data = df2, position ~ truck_perf * delta)
@@ -80,10 +83,16 @@ SPSS_mean <- df %>%
         truck_perf:delta) %>%
   spread(value, mean_position)
 
+SPSS_var <- df %>%
+  group_by(participant) %>%
+  select(-mean_position) %>%
+  unite("value",
+        truck_perf:delta) %>%
+  spread(value, var_dist)
+
+  
 # save file
 write.csv(SPSS_mean, file = "scratch/data/SPSS_mean.txt", row.names = F)
-
-
-
+write.csv(SPSS_var, file = "scratch/data/SPSS_var.txt", row.names = F)
 
 

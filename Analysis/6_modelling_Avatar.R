@@ -53,63 +53,6 @@ model_data <- model_data %>%
 # need to ensure the predicted variable is between 0 and 1 
 
 
-
-# load in the estimates data 
-# load("scratch/data/df_estimates")
-
-#### pre-analysis #### 
-# first want to look at the correlation of estimates accross condition 
-# within in each participant 
-
-# get a value to show how similar slopes are....
-# This models each participants estimates for the different 
-# conditions, then gets a value about how similar they are.
-# numbers closer to 0 better? 
-# setup data frame to record this 
-# df_slope_diff <- data.frame(participant = character(),
-#                             difference = numeric())
-
-# # run loop
-# for(p in unique(df_estimates$participant)){
-#   # subset
-#   ss <- df_estimates[df_estimates$participant == p,]
-#   ss$delta2 <- ss$delta/max(ss$delta)
-#   # make quick model 
-#   model <- glm(estimate ~ truck_perf * delta2,
-#                data = ss,
-#                family = "binomial")
-#   
-#   # get estimate of different fits
-#   m.model <- lsmeans::lstrends(model, "truck_perf", var = "delta2")
-#   
-#   # get number to show how well correlated the estimates are 
-#   num <- summary(pairs(m.model))
-#   num <- num$estimate
-#   
-#   # store this 
-#   df_slope_diff <- rbind(df_slope_diff, data.frame(participant = p,
-#                                                    difference = num))
-# }
-
-# # plt just as a quick check 
-# df_estimates %>%
-#   ggplot(aes(delta,
-#              estimate,
-#              colour = truck_perf)) +
-#   geom_smooth(method = glm,
-#               method.args = list(family = "binomial"),
-#               se = F) +
-#   facet_wrap(~participant)
-
-# probably want to combine this with the model data so it can be 
-# used as a predictor... if we decide to use it?
-
-# add in to model_data 
-# model_data <- merge(model_data, df_slope_diff)
-
-# save this 
-# save(model_data, file = "scratch/data/model_data")
-
 #### Models ####
 #### Placement as predicted variable ####
 #### place_m1: Norm_placement ~ Delta ####
@@ -117,7 +60,7 @@ model_data <- model_data %>%
 # nothing else, just the one predictor 
 
 # quick brms version 
-place_brms_1 <- brm(Abs_Norm_pos ~ Norm_Delta,
+place_real_brms_1 <- brm(Abs_Norm_pos ~ Norm_Delta,
                     data = model_data,
                     family = "beta",
                     iter = 2000,
@@ -125,10 +68,10 @@ place_brms_1 <- brm(Abs_Norm_pos ~ Norm_Delta,
                     cores = 1)
 
 # save this 
-save(place_brms_1, file = "models/outputs/brms/Real/place_brms_1")
+save(place_real_brms_1, file = "models/outputs/brms/Real/place_real_brms_1")
 
 #### place_m1.1: add in rand intercepts ####
-place_brms_1.1 <- brm(Abs_Norm_pos ~ Norm_Delta + (1|participant),
+place_real_brms_1.1 <- brm(Abs_Norm_pos ~ Norm_Delta + (1|participant),
                       data = model_data,
                       family = "beta",
                       iter = 2000,
@@ -136,10 +79,10 @@ place_brms_1.1 <- brm(Abs_Norm_pos ~ Norm_Delta + (1|participant),
                       cores = 1)
 
 # save this 
-save(place_brms_1.1, file = "models/outputs/brms/place_brms_1.1")
+save(place_real_brms_1.1, file = "models/outputs/brms/place_real_brms_1.1")
 
 #### place_m1.2: add in rand slopes ####
-place_brms_1.2 <- brm(Abs_Norm_pos ~ Norm_Delta + (1 + Norm_Delta|participant),
+place_real_brms_1.2 <- brm(Abs_Norm_pos ~ Norm_Delta + (1 + Norm_Delta|participant),
                       data = model_data,
                       family = "beta",
                       iter = 2000,
@@ -147,13 +90,13 @@ place_brms_1.2 <- brm(Abs_Norm_pos ~ Norm_Delta + (1 + Norm_Delta|participant),
                       cores = 1)
 
 # save this 
-save(place_brms_1.2, file = "models/outputs/brms/place_brms_1.2")
+save(place_real_brms_1.2, file = "models/outputs/brms/place_real_brms_1.2")
 
 #### place_m2: Norm_placement ~ Delta + Condition ####
 # add in the condition variable as a main effect 
 
 # quick brms version 
-place_brms_2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf,
+place_real_brms_2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf,
                     data = model_data,
                     family = "beta",
                     iter = 2000,
@@ -161,10 +104,10 @@ place_brms_2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf,
                     cores = 1)
 
 # save 
-save(place_brms_2, file = "models/outputs/brms/Real/place_brms_2")
+save(place_real_brms_2, file = "models/outputs/brms/Real/place_real_brms_2")
 
 #### place_m2.1: add in rand intercepts ####
-place_brms_2.1 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + (1|participant),
+place_real_brms_2.1 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + (1|participant),
                       data = model_data,
                       family = "beta",
                       iter = 2000,
@@ -172,7 +115,7 @@ place_brms_2.1 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + (1|participant),
                       cores = 1)
 
 #### place_m2.2: add in rand slopes ####
-place_brms_2.2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + (1 + Norm_Delta|participant),
+place_real_brms_2.2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + (1 + Norm_Delta|participant),
                       data = model_data,
                       family = "beta",
                       iter = 2000,
@@ -184,15 +127,48 @@ place_brms_2.2 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + (1 + Norm_Delta|p
 # main effects and interactions of Delta and Condition
  
 # quick brms version 
-place_brms_3 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2,
+place_real_brms_3 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2,
                    data = model_data,
                    family = "beta",
                    iter = 2000,
                    chains = 1,
                    cores = 1)
 
+# version just on truck part 
+model_truckonly <- model_data[model_data$condition_label == "truck",]
+
+# run model
+place_compare_brms_3 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2,
+                            data = model_truckonly,
+                            family = "beta",
+                            chains = 1,
+                            iter = 2000,
+                            cores = 1)
+
+# add intercepts
+place_compare_brms_3_priors <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2,
+                                   data = model_truckonly,
+                                   family = "beta",
+                                   prior = c(set_prior("normal(2.78, 0.08)",
+                                                       class = "b",
+                                                       coef = "Norm_Delta"),
+                                             set_prior("normal(-0.4, 0.11)",
+                                                       class = "b",
+                                                       coef = "Norm_Delta:truck_perfVariable"),
+                                             set_prior("normal(0.66, 0.07)",
+                                                       class = "b",
+                                                       coef = "truck_perfVariable"),
+                                             set_prior("normal(-2.56, 0.06)",
+                                                       class = "Intercept")),
+                                   chains = 1, iter = 2000, cores = 1)
+
+
+
+# save 
+save(place_compare_brms_3, file = "models/outputs/brms/Real/place_compare_brms_3")
+
 #### place_m3.1: add in rand intercepts ####
-place_brms_3.1 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 + (1|participant),
+place_real_brms_3.1 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 + (1|participant),
                       data = model_data,
                       family = "beta",
                       iter = 2000,
@@ -200,7 +176,7 @@ place_brms_3.1 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 + (1|participan
                       cores = 1)
 
 #### place_m3.2: add in rand slopes ####
-place_brms_3.2 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 +
+place_real_brms_3.2 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 +
                         (1 + Norm_Delta*truck_perf|participant),
                       data = model_data,
                       family = "beta",
@@ -230,7 +206,7 @@ place_brms_3.2 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 +
 
 #### place_m4: Norm_placement ~ Delta + Condition + condition_label ####
 # add in the main effect of order
-place_brms_4 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + condition_label, 
+place_real_brms_4 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + condition_label, 
                     data = model_data, 
                     family = "beta",
                     iter = 2000,
@@ -238,12 +214,12 @@ place_brms_4 <- brm(Abs_Norm_pos ~ Norm_Delta + truck_perf + condition_label,
                     cores = 1)
 
 # save 
-save(place_brms_4, file = "models/outputs/brms/Real/place_brms_4")
+save(place_real_brms_4, file = "models/outputs/brms/Real/place_real_brms_4")
 
 
 #### place_m5: Norm_placement ~ (Delta + truck_perf + condition)^2 ####
 # add in all two way interactions
-place_brms_5 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf + condition_label)^2, 
+place_real_brms_5 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf + condition_label)^2, 
                     data = model_data, 
                     family = "beta",
                     iter = 2000,
@@ -251,10 +227,10 @@ place_brms_5 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf + condition_label)^2
                     cores = 1)
 
 # save 
-save(place_brms_5, file = "models/outputs/brms/Real/place_brms_5")
+save(place_real_brms_5, file = "models/outputs/brms/Real/place_real_brms_5")
 
 #### place_m6: Norm_placement ~ (Delta + truck_perf + condition)^3 ####
-place_brms_6 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf + condition_label)^3, 
+place_real_brms_6 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf + condition_label)^3, 
                     data = model_data, 
                     family = "beta",
                     iter = 2000,
@@ -262,7 +238,7 @@ place_brms_6 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf + condition_label)^3
                     cores = 1)
 
 # save 
-save(place_brms_6, file = "models/outputs/brms/Real/place_brms_6")
+save(place_real_brms_6, file = "models/outputs/brms/Real/place_real_brms_6")
 
 
 #### ACCURACY ####
