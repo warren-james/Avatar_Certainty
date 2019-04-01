@@ -73,6 +73,23 @@ plt
 pos_aov <- aov(data = df2, position ~ truck_perf * delta)
 var_aov <- aov(data = df2, variance ~ delta * truck_perf)
 
+#### RT plot ####
+# make plot of RT by condition 
+plt_rt <- df_Essex_decisions %>%
+  group_by(participant, truck_perf, delta) %>%
+  summarise(mean_rt = mean(rt)) %>%
+  mutate(delta = as.factor(delta)) %>%
+  ggplot(aes(mean_rt, colour = truck_perf, fill = truck_perf)) +
+  geom_density(alpha = 0.3) +
+  facet_wrap(~delta)
+plt_rt
+
+df_rt <- df_Essex_decisions %>%
+  group_by(participant, truck_perf, delta) %>%
+  summarise(mean_rt = mean(rt)) 
+
+rt_aov <- aov(data = df_rt, mean_rt ~ delta * truck_perf)
+  
 #### SPSS data ####
 # sort mean pos 
 SPSS_mean <- df %>%
@@ -90,9 +107,14 @@ SPSS_var <- df %>%
         truck_perf:delta) %>%
   spread(value, var_dist)
 
-  
+SPSS_rt <- df_rt %>%
+  mutate(mean_rt = round(mean_rt, digits = 3)) %>%
+  unite("value",
+        truck_perf:delta) %>%
+  spread(value, mean_rt)
+
 # save file
 write.csv(SPSS_mean, file = "scratch/data/SPSS_mean.txt", row.names = F)
 write.csv(SPSS_var, file = "scratch/data/SPSS_var.txt", row.names = F)
-
+write.csv(SPSS_rt, file = "scratch/data/SPSS_rt.txt", row.names = F)
 
