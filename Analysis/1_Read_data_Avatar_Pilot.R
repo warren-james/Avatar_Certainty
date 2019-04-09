@@ -204,6 +204,8 @@ df_Essex_decisions <- df_Essex_decisions %>%
   mutate(chance = prob_success(placed_x, delta, spread, max_speed)) %>%
   ungroup()
 
+# add in Group_type 
+df_Essex_decisions$group_type <- "Individual"
 
 # save this
 save(df_Essex_decisions, file = "scratch/data/df_Essex_decisions")

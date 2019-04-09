@@ -208,6 +208,8 @@ df_Aberdeen_decisions <- df_Aberdeen_decisions %>%
 df_Aberdeen_decisions$condition_label <- "abstract"
 df_Aberdeen_decisions$condition_label[df_Aberdeen_decisions$condition == 2] <- "truck"
 
+# add in group_type 
+df_Aberdeen_decisions$group_type <- "Group"
 
 # save this
 save(df_Aberdeen_decisions, file = "scratch/data/df_Aberdeen_decisions")

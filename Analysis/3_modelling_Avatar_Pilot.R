@@ -51,8 +51,15 @@ model_pilot_data <- model_pilot_data %>%
          -speed,
          -success) %>% # only for now
   mutate(Norm_Delta = delta/max(delta)) %>%
-  filter(Abs_Norm_pos < 1.01)
+  filter(Abs_Norm_pos < 1.01) %>% 
+  mutate(Abs_Norm_pos = (Abs_Norm_pos + 1e-5)*0.9999) 
 
+# add in dist_type 
+model_pilot_data$dist_type <- "close"
+model_pilot_data$dist_type[model_pilot_data$Norm_Delta > 0.5] <- "far"
+
+model_pilot_data_midremoved <- model_pilot_data %>%
+  filter(Norm_Delta != median(Norm_Delta))
 
 # load in the estimates data 
 load("scratch/data/df_estimates")
@@ -191,6 +198,17 @@ place_pilot_brms_3 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2,
 
 # save 
 save(place_pilot_brms_3, file = "models/outputs/brms/Pilot/place_pilot_brms_3")
+
+#### place_m3_v2: using dist_type ####
+place_pilot_brms_3_v2 <- brm(Abs_Norm_pos ~ (dist_type + truck_perf)^2,
+                             data = model_pilot_data_midremoved,
+                             family = "beta",
+                             chains = 1,
+                             iter = 2000,
+                             cores = 1)
+
+# save 
+save(place_pilot_brms_3_v2, file = "models/outputs/brms/Pilot/place_pilot_brms_3_v2")
 
 #### place_m3.1: add in rand intercepts ####
 place_pilot_brms_3.1 <- brm(Abs_Norm_pos ~ (Norm_Delta + truck_perf)^2 + (1|participant),
