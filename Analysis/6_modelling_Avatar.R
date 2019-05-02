@@ -1,19 +1,11 @@
 #### Avatar - Analysis script ####
-# few ideas
-# modelling optimal choice vs. not 
-# - Define a range for each distance that would get the optimal 
-#   Accuracy and simply model if people are in that range for each
-#   condition at the various distances?
-# - Could also just do mean normalised placement again with order 
-#   and condition as predictors?
-# - What about some more simple analysis for the final years working 
-#   with Alasdair?
-
 
 #### Library ####
-library(tidyverse)
+library(brms) 
+library(rethinking)
 library(rstan)
-library(brms) # probably won't need this...
+library(tidybayes)
+library(tidyverse)
 
 #### Notes ####
 # max speed is max(df_deltas)/100
@@ -27,6 +19,35 @@ library(brms) # probably won't need this...
 travel_time <- 100
 
 #### Any Functions ####
+# plotting mean estimates
+STAN_plt <- function(model_output, dataframe, effs){
+  # setup plt data
+  plt_data <- as.tibble(model_output) %>%
+    gather(key = "remove",
+           value = "pred_mu") %>%
+    group_by(remove) %>%
+    mutate(row_num = strsplit(remove, split = "V")[[1]][2]) %>%
+    ungroup() %>%
+    select(-remove) %>%
+    merge(dataframe)
+  # make plt to output
+  output <- plt_data %>%
+    ggplot(aes(pred_mu,
+               colour = truck_perf,
+               fill = truck_perf)) + 
+    geom_density(alpha = 0.3) + 
+    theme_minimal() + 
+    theme(legend.position = "bottom") + 
+    ggthemes::scale_color_ptol() + 
+    ggthemes::scale_fill_ptol()
+  if(effs == 2){
+    output <- output + facet_wrap(~plt_data[[4]])
+  } else if(effs == 3){
+    output <- output + facet_grid(plt_data[[4]]~plt_data[[5]])
+  }
+  return(output)
+}
+
 
 #### Load in data ####
 load("scratch/data/df_Aberdeen_decisions")
@@ -48,17 +69,14 @@ model_data <- model_data %>%
          -speed) %>% # only for now
   mutate(Norm_Delta = delta/max(delta)) %>%
   filter(Abs_Norm_pos < 1 + 1e-8) %>% 
-  mutate(Abs_Norm_pos = (Abs_Norm_pos + 1e-5)*0.9999) # need to ensure the predicted variable is between 0 and 1 
-
-# add in dist_type 
-model_data$dist_type <- "close"
-model_data$dist_type[model_data$Norm_Delta > median(model_data$Norm_Delta)] <- "far"
+  mutate(Abs_Norm_pos = (Abs_Norm_pos + 1e-5)*0.9999,
+         dist_type = ifelse(Norm_Delta > median(Norm_Delta), "far", "close"))  
 
 # make truck only 
 model_truckonly <- model_data %>% 
   filter(condition_label == "truck")
 
-#### Models ####
+#### BRM Models ####
 #### Placement as predicted variable ####
 #### place_m1: Norm_placement ~ Delta ####
 # Use normalised Delta to predict Placement 
@@ -321,3 +339,65 @@ chance_brms_summ <- brm(chance ~ (dist_type + truck_perf + condition_label)^3,
 save(chance_brms_summ, file = "models/outputs/brms/Real/chance_brms_summ")
 
 
+
+#### STAN Models ####
+#### STAN: Placement ####
+# First, do everything we're interested in, so all interactions...
+X <- model.matrix(Abs_Norm_pos ~ (dist_type + truck_perf + condition_label)^3,
+                  data = model_data)
+
+# add in row identifier
+model_data <- model_data %>%
+  rownames_to_column(var = "row_num") %>% 
+  select(row_num, truck_perf, condition_label, dist_type, Abs_Norm_pos)
+
+stan_df <- list(
+  N = nrow(model_data),
+  K = ncol(X),
+  y = model_data$Abs_Norm_pos,
+  X = X
+)
+
+m_stan_full_pos <- stan(
+  file = "models/stan_files/stan_model.stan",
+  data = stan_df,
+  chains = 1,
+  warmup = 1000,
+  iter = 2000,
+  refresh = 100
+)
+
+samples <- rstan::extract(m_stan_full_pos)
+plt_stan_full_pos <- STAN_plt(samples$mu, model_data, effs = 3)
+plt_stan_full_pos$labels$x <- "Predicted Mean Placement Position"
+plt_stan_full_pos$labels$colour <- "Truck Performance"
+plt_stan_full_pos$labels$fill <- "Truck Performance"
+plt_stan_full_pos
+
+# get HPDI stuff 
+HPDI_sfp <- plt_stan_full_pos[["data"]] %>%
+  group_by(truck_perf, condition_label, dist_type) %>%
+  summarise(mean_est = mean(pred_mu),
+            lower = HPDI(pred_mu, 0.95)[1],
+            upper = HPDI(pred_mu, 0.95)[2])
+HPDI_sfp
+
+# try posterior predictions? 
+post_preds <- function(m, pred_dat, x){
+  post <- rstan::extract(m)
+  
+  beta <- colMeans(post$beta)
+  gamma <- colMeans(post$gamma)
+  
+  mu  <- plogis(X %*% beta)
+  phi <- exp(X %*% gamma)
+  
+  A <- mu * phi 
+  B <- (1 - mu) * phi
+  
+  n <- length(x)
+  
+  p <- unlist(map2(A, B, dbeta, x = x))
+  
+  return(p)
+}
