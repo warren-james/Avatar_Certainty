@@ -41,9 +41,9 @@ STAN_plt <- function(model_output, dataframe, effs){
     ggthemes::scale_color_ptol() + 
     ggthemes::scale_fill_ptol()
   if(effs == 2){
-    output <- output + facet_wrap(~plt_data[[4]])
+    output <- output + facet_wrap(~plt_data[[5]])
   } else if(effs == 3){
-    output <- output + facet_grid(plt_data[[4]]~plt_data[[5]])
+    output <- output + facet_grid(plt_data[[5]]~plt_data[[6]])
   }
   return(output)
 }
@@ -54,15 +54,7 @@ load("scratch/data/df_Aberdeen_decisions")
 
 # make model data 
 model_data <- df_Aberdeen_decisions %>%
-  mutate(Abs_Norm_pos = abs(placed_x/delta)) 
-
-# add in binary predictors for stan modelling 
-# condition
-model_data$cnd_rand <- 1
-model_data$cnd_rand[model_data$truck_perf == "Constant"] <- 0
-
-# reduce down columns 
-model_data <- model_data %>%
+  mutate(Abs_Norm_pos = abs(placed_x/delta)) %>%
   select(-condition,
          -spread, 
          -initial_x,
@@ -75,6 +67,16 @@ model_data <- model_data %>%
 # make truck only 
 model_truckonly <- model_data %>% 
   filter(condition_label == "truck")
+
+# Load in Essex data 
+load("scratch/data/df_Essex_decisions")
+model_data_E <- df_Essex_decisions %>%
+  mutate(Abs_Norm_pos = abs(placed_x/delta),
+         cnd_rand = ifelse(truck_perf == "Constant", 0, 1),
+         Norm_Delta = delta/max(delta)) %>%
+  filter(Abs_Norm_pos < 1 + 1e-8) %>% 
+  mutate(Abs_Norm_pos = (Abs_Norm_pos + 1e-5)*0.9999,
+         dist_type = ifelse(Norm_Delta > median(Norm_Delta), "far", "close")) 
 
 #### BRM Models ####
 #### Placement as predicted variable ####
@@ -349,7 +351,7 @@ X <- model.matrix(Abs_Norm_pos ~ (dist_type + truck_perf + condition_label)^3,
 # add in row identifier
 model_data <- model_data %>%
   rownames_to_column(var = "row_num") %>% 
-  select(row_num, truck_perf, condition_label, dist_type, Abs_Norm_pos)
+  select(row_num, Abs_Norm_pos, truck_perf, condition_label, dist_type)
 
 stan_df <- list(
   N = nrow(model_data),
@@ -376,13 +378,16 @@ plt_stan_full_pos
 
 # get HPDI stuff 
 HPDI_sfp <- plt_stan_full_pos[["data"]] %>%
-  group_by(truck_perf, condition_label, dist_type) %>%
+  group_by(truck_perf,
+           condition_label,
+           dist_type) %>%
   summarise(mean_est = mean(pred_mu),
             lower = HPDI(pred_mu, 0.95)[1],
             upper = HPDI(pred_mu, 0.95)[2])
 HPDI_sfp
 
 # try posterior predictions? 
+# this needs work... 
 post_preds <- function(m, pred_dat, x){
   post <- rstan::extract(m)
   
@@ -401,3 +406,77 @@ post_preds <- function(m, pred_dat, x){
   
   return(p)
 }
+
+
+#### BRMS: add in aberdeen vs essex ####
+# sort out data
+model_compare_A <- model_truckonly %>%
+  select(participant,
+         Abs_Norm_pos,
+         truck_perf,
+         dist_type) %>%
+  mutate(group = "Aberdeen")
+
+model_compare <- model_data_E %>%
+  select(participant,
+         Abs_Norm_pos,
+         truck_perf,
+         dist_type) %>%
+  mutate(group = "Essex") %>%
+  rbind(model_compare_A)
+
+# model 
+compare_brms <- brm(Abs_Norm_pos ~ (truck_perf + dist_type + group)^3,
+                    data = model_compare,
+                    family = "beta",
+                    chains = 1,
+                    cores = 1,
+                    iter = 2000)
+
+# sort plotting 
+plt_compare_group <- model_compare %>%
+  add_predicted_draws(compare_brms) %>%
+  ggplot(aes(.prediction, colour = group, fill = group)) +
+  geom_density(alpha = 0.3) +
+  # geom_density(data = model_data,
+  #              aes(Accuracy,
+  #                  colour = dist_type,
+  #                  fill = NA),
+  #              alpha = 0.0001) +
+  theme_minimal() +
+  ggthemes::scale_colour_ptol() +
+  ggthemes::scale_fill_ptol() +
+  facet_grid(truck_perf~dist_type)
+plt_compare_group
+
+#### STAN: add in aberdeen vs essex ####
+X <- model.matrix(Abs_Norm_pos ~ (dist_type + truck_perf + group)^3,
+                  data = model_compare)
+
+# add in row identifier
+model_data_compare_stan <- model_compare %>%
+  rownames_to_column(var = "row_num") %>% 
+  select(row_num, Abs_Norm_pos, truck_perf, group, dist_type)
+
+stan_df <- list(
+  N = nrow(model_data_compare_stan),
+  K = ncol(X),
+  y = model_data_compare_stan$Abs_Norm_pos,
+  X = X
+)
+
+m_stan_compare <- stan(
+  file = "models/stan_files/stan_model.stan",
+  data = stan_df,
+  chains = 1,
+  warmup = 1000,
+  iter = 2000,
+  refresh = 100
+)
+
+samples <- rstan::extract(m_stan_compare)
+plt_stan_full_pos <- STAN_plt(samples$mu, model_data_compare_stan, effs = 3)
+plt_stan_full_pos$labels$x <- "Predicted Mean Placement Position"
+plt_stan_full_pos$labels$colour <- "Truck Performance"
+plt_stan_full_pos$labels$fill <- "Truck Performance"
+plt_stan_full_pos
