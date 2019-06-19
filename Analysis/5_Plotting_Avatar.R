@@ -348,7 +348,8 @@ plt_dist_dec_2 <- plt_dist_dec_2 %>%
              colour = truck_perf,
              fill = truck_perf)) + 
   geom_density(alpha = 0.3) +
-  facet_wrap(~dist_type) + 
+  # facet_wrap(~dist_type) + 
+  facet_grid(condition_label~dist_type) + 
   scale_colour_ptol() + 
   scale_fill_ptol() + 
   theme_bw()
@@ -368,9 +369,22 @@ plt_dist_dec_2$data %>%
   geom_density(alpha = 0.3) + 
   facet_wrap(~delta)
 
+# setup model data 
+model_data <- plt_dist_dec_2[["data"]] %>% 
+  filter(abs_pos <= 0.9999,
+         abs_pos >= 0.00001)
+
+# plot quick 
+model_data %>% 
+  ggplot(aes(abs_pos, 
+             colour = truck_perf,
+             fill = truck_perf)) + 
+  geom_density(alpha = 0.3) + 
+  facet_grid(condition_label~dist_type)
+
 # quick model
-m4 <- brm(abs_pos ~ (dist_type + truck_perf)^2, 
-          data = plt_dist_dec_2$data, 
+m4 <- brm(abs_pos ~ (condition_label + dist_type + truck_perf)^2, 
+          data = model_data, 
           family = "beta",
           iter = 2000,
           chains = 1, 
@@ -381,7 +395,7 @@ save(m4, file = "models/outputs/brms_m4")
 
 # add rand intercepts?
 m4.1 <- brm(abs_pos ~ (dist_type + truck_perf)^2 + (1|participant), 
-            data = plt_dist_dec_2$data, 
+            data = model_data, 
             family = "beta",
             iter = 2000,
             chains = 1, 
