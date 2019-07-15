@@ -3,7 +3,6 @@
 # for the AVATAR experiment
 
 #### Library ####
-library(betareg)
 library(brms)
 library(lme4)
 library(rstan)
@@ -17,21 +16,24 @@ library(tidybayes)
 #### Load in Data ####
 load("scratch/data/df_Aberdeen_decisions")
 df_Aberdeen_decisions <- df_Aberdeen_decisions %>% 
-  mutate(dist_type = ifelse(delta < median(delta), "close", "far"))
+  mutate(dist_type = ifelse(delta < median(delta), "close", "far"),
+         participant = as.factor(participant))
 
 #### Mean and Variance in positioning ####
 # for each participant
 df_agg_p <- df_Aberdeen_decisions %>%
-  group_by(participant, condition_label, truck_perf, delta, dist_type) %>% 
+  group_by(participant, condition_label, truck_perf, dist_type) %>% 
   mutate(abs_pos = abs(placed_x)/delta) %>%
   summarise(mean_pos = mean(abs_pos),
+            accuracy = mean(success),
             var_pos = var(abs_pos))
 
 # overall 
 df_agg_o <- df_agg_p %>%
-  group_by(condition_label, truck_perf, delta, dist_type) %>% 
+  group_by(condition_label, truck_perf, dist_type) %>% 
   summarise(n = n(), 
             position = mean(mean_pos),
+            accuracy = mean(success),
             variance = mean(var_pos),
             se_pos = sd(mean_pos)/sqrt(n),
             se_var = sd(var_pos)/sqrt(n))
@@ -148,28 +150,32 @@ plt_dist_mean_p
 #### Analysis: ANOVAs ####
 # problem here is that the data is not "normal"
 # so take this with a pinch of salt
-aov_pos <- aov(data = df_agg_o, position ~ truck_perf * delta * condition_label)
-aov_var <- aov(data = df_agg_o, variance ~ delta * truck_perf * condition_label)
+aov_pos <- aov(data = df_agg_p, mean_pos ~ truck_perf * dist_type * condition_label + 
+                 Error(participant/(truck_perf * dist_type)) + condition_label)
+aov_var <- aov(data = df_agg_p, var_pos ~ delta * truck_perf * condition_label + 
+                 Error(participant/(truck_perf * dist_type)) + condition_label)
 
-#### Analysis: glms? ####
-# glm1 <- glmer(position ~ (truck_perf + delta + condition_label)^3,
-#               data = df_agg_o,
-#               family = )
-
-betareg_1 <- betareg(position ~ (truck_perf + delta + condition_label)^3,
-                     data = df_agg_o)
-
-betareg_2 <- betareg(mean_pos ~ (truck_perf + delta + condition_label)^3,
-                     data = model_data)
+# Same for the Accuracy 
+aov_acc <- aov(data = df_agg_p, accuracy ~ truck_perf * dist_type * condition_label + 
+                 Error(participant/(truck_perf * dist_type)) + condition_label)
 
 
 #### Setup SPSS files ####
 SPSS_mean <- df_agg_p %>%
-  select(-var_pos) %>%
-  mutate(delta = round(delta)) %>%
+  select(-var_pos,
+         -accuracy) %>%
   unite("value",
-        truck_perf:delta) %>%
+        truck_perf:dist_type) %>%
   spread(value, mean_pos)
+
+SPSS_acc <- df_agg_p %>%
+  select(-var_pos,
+         -mean_pos) %>%
+  unite("value",
+        truck_perf:dist_type) %>%
+  spread(value, 
+         accuracy)
 
 # save file
 write.csv(SPSS_mean, file = "scratch/data/SPSS_mean_Aberdeen.txt", row.names = F)
+write.csv(SPSS_acc, file = "scratch/data/SPSS_accuracy.txt", row.names = F)
