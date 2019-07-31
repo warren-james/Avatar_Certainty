@@ -208,8 +208,17 @@ df_Aberdeen_decisions <- df_Aberdeen_decisions %>%
 df_Aberdeen_decisions$condition_label <- "abstract"
 df_Aberdeen_decisions$condition_label[df_Aberdeen_decisions$condition == 2] <- "truck"
 
-# add in group_type 
-df_Aberdeen_decisions$group_type <- "Group"
+
+#### Read in group info ####
+df_Aberdeen_extra <- read.csv("data/Extra_details.csv") %>% 
+  filter(University != "Essex") %>% 
+  select(-University)
+
+# save this 
+save(df_Aberdeen_extra, file = "scratch/data/df_Aberdeen_extra")
+# ??? no idea how he got here... but I'm keeping him 
+# bind to main data 
+df_Aberdeen_decisions <- merge(df_Aberdeen_decisions, df_Aberdeen_extra)
 
 # save this
 save(df_Aberdeen_decisions, file = "scratch/data/df_Aberdeen_decisions")
@@ -432,9 +441,5 @@ df_Aberdeen_demographics$gender[df_Aberdeen_demographics$gender == "f"] <- "fema
 # save this 
 save(df_Aberdeen_demographics, file = "scratch/data/df_Aberdeen_demographics")
 
-# clear environment 
+# tidy 
 rm(list = ls())
-
-
-
-
