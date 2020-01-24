@@ -55,6 +55,11 @@ load("scratch/data/df_Aberdeen_avater_info")
 # confidence 
 load("scratch/data/df_Aberdeen_confidence")
 
+#### process ####
+# 3 participants had less trials for some reason 
+# not sure why 
+# let's remove them 
+remove_particiapnts <- c("40", "46", "63")
 
 #### PLOTS: ####
 #### PLOTS: Estimates vs actual ####
@@ -153,6 +158,7 @@ plt_decisions <- df_Aberdeen_decisions %>%
          Spread = as.factor(spread),
          Rand_first = as.factor(rand_first),
          Norm_Placement = abs(placed_x/delta)) %>%
+  filter(Norm_Placement < 1.01) %>%
   ggplot(aes(delta, Norm_Placement, 
              colour = truck_perf)) + 
   geom_point(alpha = 0.2) + 
@@ -173,10 +179,12 @@ ggsave("scratch/plots/plt_decisions.png",
 
 #### PLOT: decisions phase again... with order info ####
 plt_decisions <- df_Aberdeen_decisions %>%
+  filter(!participant %in% remove_particiapnts) %>% 
   mutate(Condition = as.factor(condition),
          Spread = as.factor(spread),
          Rand_first = as.factor(rand_first),
          Norm_Placement = abs(placed_x/delta)) %>%
+  filter(Norm_Placement < 1.01) %>%
   ggplot(aes(delta, Norm_Placement, 
              colour = truck_perf)) + 
   geom_point(alpha = 0.2) + 
@@ -212,6 +220,7 @@ plt_acc <- df_Aberdeen_decisions %>%
 plt_acc
 
 #### PLOT: add in strat lines #### 
+# TODO Fix this
 # first add max speed to the data 
 max_speed <- df_Aberdeen_avatar_info %>% 
   select(-reach)
