@@ -30,7 +30,7 @@ addpath('images/Truck_version')
 prompt = {'Enter Participant ID: ','Order (1:6)','Condition (1 or 2)','Measure type (1 or 2)'};
 title = 'Input';
 num_lines = 1;
-defaults = {'99','1','1','2','1'}; % setting condition default to 2 so it uses the firetruck
+defaults = {'99','1','2','2','1'}; % setting condition default to 2 so it uses the firetruck
 answer = inputdlg(prompt, title, num_lines, defaults);
 
 % record this
