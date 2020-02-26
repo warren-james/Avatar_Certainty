@@ -624,9 +624,9 @@ rm(list = ls())
 
 # set some constants
 travel_time <- 100
-betas <- data.frame(skew = c("rand_uniform", "hard_cutoff"),
-                    beta1 = c(1,10000),
-                    beta2 = c(1,10000))
+betas <- data.frame(skew = c("rand_uniform", "hard_cutoff", "broad"),
+                    beta1 = c(1,10000, 10),
+                    beta2 = c(1,10000, 10))
 
 # setup data frame for loop
 beta_frame <- data.frame(skew = character(),
@@ -664,7 +664,7 @@ plt <- beta_frame %>%
               aes(y = estimate),
               se = F) +
   scale_x_continuous(breaks = seq(100,900,100)) + 
-  scale_colour_ptol() 
+  see::scale_color_flat() 
 plt$labels$x = "Delta (Pixels)"
 plt$labels$y = "Estimated success rate"
 plt$labels$colour = "Shape"
