@@ -1,0 +1,1 @@
+Condition,Spread,Block,Trial,Delta,RT,Initial_x,Placed_x,Target_side,Speed,Success

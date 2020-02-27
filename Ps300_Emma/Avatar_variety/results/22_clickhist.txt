@@ -1,0 +1,1 @@
+Spread,Block,Trial,Time_elapsed,Delta,click_num,Placed_x

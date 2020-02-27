@@ -1,4 +1,6 @@
-function Firetruck
+ function Firetruck
+
+Screen('Preference', 'SkipSyncTests', 1);
 %% To run the Avatar Experiment
 % Setting up the experiment: 
 % - Order
@@ -93,7 +95,6 @@ else
 end
 
 % open Screen
-Screen('Preference', 'SkipSyncTests', 1);
 [params.stimuliScrn, wRect] = Screen('OpenWindow',0, 255*params.grey);
 
 % set text size and font
