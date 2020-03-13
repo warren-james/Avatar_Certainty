@@ -26,9 +26,9 @@ delta_list = seq(100, x_res/2, 100)
 # using the sigmoid funtion as to whether the truck moves on or not 
 # make data frame
 inc_frame <- data.frame(iter = numeric(),
-                         delta = numeric(),
-                         chance = numeric(),
-                         max_value = numeric())
+                        delta = numeric(),
+                        chance = numeric(),
+                        max_value = numeric())
 
 # loop through this 
 for(d in unique(delta_list)){
@@ -48,9 +48,9 @@ for(d in unique(delta_list)){
     }
     chance = success_rate[d]
     inc_frame <- rbind(inc_frame, data.frame(iter = i,
-                                               delta = d,
-                                               chance = chance,
-                                               max_value = max_value))
+                                             delta = d,
+                                             chance = chance,
+                                             max_value = max_value))
   }
 }
 
@@ -81,9 +81,9 @@ inc_frame %>%
 
 # make data frame
 dec_frame <- data.frame(iter = numeric(),
-                          delta = numeric(),
-                          chance = numeric(),
-                          min_value = numeric())
+                        delta = numeric(),
+                        chance = numeric(),
+                        min_value = numeric())
 
 # loop through this 
 for(d in unique(delta_list)){
@@ -103,9 +103,9 @@ for(d in unique(delta_list)){
     }
     chance = success_rate[d]
     dec_frame <- rbind(dec_frame, data.frame(iter = i,
-                                                 delta = d,
-                                                 chance = chance,
-                                                 min_value = min_value))
+                                             delta = d,
+                                             chance = chance,
+                                             min_value = min_value))
   }
 }
 
@@ -515,7 +515,7 @@ max_speed <- (max(delta_list)/travel_time) - 1
 betas <- data.frame(skew = c("left", "centre", "right"),
                     beta1 = c(3, 3, 7),
                     beta2 = c(7, 3, 3))
-                    
+
 spread_settings <- c(1, 10)
 
 # setup data frame for loop 
@@ -530,7 +530,7 @@ beta_frame <- data.frame(iter = numeric(),
 for(skew in unique(betas$skew)){
   # temp frame
   temp <- betas[betas$skew == skew,]
-
+  
   # now loop through sizes
   for(spreads in unique(spread_settings)){
     beta1 <- temp$beta1 * spreads
@@ -587,7 +587,7 @@ beta_frame %>%
   geom_histogram(position = "dodge", binwidth = 0.075) + 
   scale_x_continuous(breaks = c(0.25, 0.75)) + 
   facet_grid(skew ~ delta)
-  
+
 
 # just plotting things 
 distr_plots <- data.frame(skew = character(),
@@ -624,32 +624,38 @@ rm(list = ls())
 
 # set some constants
 travel_time <- 100
-betas <- data.frame(skew = c("rand_uniform", "hard_cutoff"),
-                    beta1 = c(1,10000),
-                    beta2 = c(1,10000))
+betas <- data.frame(skew = c("rand_uniform", "hard_cutoff", "broad"),
+                    beta1 = c(1,10000, 10),
+                    beta2 = c(1,10000, 10))
+n_iter <- 100
+n_trials <- 100
 
 # setup data frame for loop
-beta_frame <- data.frame(skew = character(),
+beta_frame <- data.frame(iter = numeric(),
+                         skew = character(),
                          Delta = numeric(),
                          estimate = numeric())
 
 # make same loop as above
-for(skew in unique(betas$skew)){
-  # temp frame
-  temp <- betas[betas$skew == skew,]
-
-  # sim
-  y <- (round(rbeta(1000000, temp$beta1, temp$beta2)*8)+1)*travel_time
-  # data frame
-  delta_frame <- data.frame(skew = skew,
-                            Delta = seq(100,900,100))
-
-  delta_frame <- delta_frame %>%
-    group_by(skew, Delta) %>%
-    mutate(estimate = sum(y >= Delta)/length(y))
-
-  # bind to frame
-  beta_frame <- rbind(beta_frame, as.data.frame(delta_frame))
+for(ii in 1:n_iter){
+  for(skew in unique(betas$skew)){
+    # temp frame
+    temp <- betas[betas$skew == skew,]
+    
+    # sim
+    y <- (round(rbeta(n_trials, temp$beta1, temp$beta2)*8)+1)*travel_time
+    # data frame
+    delta_frame <- data.frame(iter = ii,
+                              skew = skew,
+                              Delta = seq(100,900,100))
+    
+    delta_frame <- delta_frame %>%
+      group_by(skew, Delta) %>%
+      mutate(estimate = sum(y >= Delta)/length(y))
+    
+    # bind to frame
+    beta_frame <- rbind(beta_frame, as.data.frame(delta_frame))
+  }
 }
 
 # tidy
@@ -657,16 +663,87 @@ rm(betas, skew, y, temp)
 
 # now make plot
 plt <- beta_frame %>%
-  ggplot(aes(Delta, estimate, colour = skew)) +
+  ggplot(aes(Delta, estimate,
+             colour = skew,
+             fill = skew)) +
   geom_point() +
-  stat_smooth(method = glm,
-              method.args = list(family = "binomial"),
-              aes(y = estimate),
-              se = F) +
+  geom_smooth(method = glm,
+              method.args = list(family = "binomial")) +
   scale_x_continuous(breaks = seq(100,900,100)) + 
-  scale_colour_ptol() 
+  see::scale_color_flat() + 
+  see::scale_fill_flat() + 
+  facet_wrap(~skew)
 plt$labels$x = "Delta (Pixels)"
 plt$labels$y = "Estimated success rate"
 plt$labels$colour = "Shape"
+plt$labels$fill = "Shape"
 plt
 
+# try fitting models instead of relying on geom_smooth 
+# this doesn't really work just now... 
+# it can't fit the model with a really steep slope...
+# for some reason it has no confidence in its estimates... 
+new_data <- tibble(skew = character(),
+                   norm_D = numeric(),
+                   mu_estimate = numeric(),
+                   upper = numeric(),
+                   lower = numeric())
+
+deltas <- seq(100,900,20)
+
+squash <- function(y, max, min, squash){
+  y <- y * ((max-squash) - (min + squash)) + (min + squash)
+  return(y)
+}
+
+beta_frame <- beta_frame %>% 
+  mutate(norm_D = Delta/max(Delta))#,
+#estimate = squash(estimate, 1, 0, 1e-5))
+
+for(sk in unique(beta_frame$skew)){
+  print(sk)
+  ss <- beta_frame %>%
+    filter(skew == sk)
+  m <- glm(estimate ~ norm_D,
+           data = ss,
+           family = "binomial")
+  
+  # new version 
+  temp <- tibble(skew = rep(sk, length(deltas)),
+                 norm_D = deltas/max(deltas))
+  temp <- ciTools::add_ci(temp, m) %>% 
+    rename(mu_estimate = pred,
+           upper = UCB0.975,
+           lower = LCB0.025)
+  # colnames(temp, c("skew", "norm_D", "mu_estimae","upper","lower"))
+  # int = as.numeric(m$coefficients[1])
+  # slope = as.numeric(m$coefficients[2])
+  # 
+  # int_upp = confint(m)[1,2]
+  # int_low = confint(m)[1,1]
+  # slope_upp = confint(m)[2,2]
+  # slope_low = confint(m)[2,1]
+  # 
+  # temp <- tibble(skew = rep(sk, length(deltas)),
+  #                norm_D = deltas/max(deltas)) %>%
+  #   mutate(mu_estimate = boot::inv.logit(int + slope*norm_D),
+  #          upper = boot::inv.logit(int_upp + slope_upp*norm_D),
+  #          lower = boot::inv.logit(int_low + slope_low*norm_D))
+  
+  new_data <- rbind(new_data, temp)
+}
+
+new_data %>% 
+  ggplot(aes(norm_D, mu_estimate,
+             colour = skew,
+             fill = skew)) + 
+  # geom_point() + 
+  # geom_line() +
+  geom_smooth(method = glm, 
+              method.args = list(family = "binomial"),
+              se = F) +
+  geom_ribbon(aes(ymax = upper, ymin = lower),
+              alpha = .3) +
+  see::scale_color_flat() + 
+  see::scale_fill_flat() +
+  facet_wrap(~skew)
