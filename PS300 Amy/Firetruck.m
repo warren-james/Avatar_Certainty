@@ -1,13 +1,12 @@
-function Firetruck
+ function Firetruck
+
+Screen('Preference', 'SkipSyncTests', 1);
 %% To run the Avatar Experiment
-% There are two conditions that need to be set
-% - Distribution of Speed has two settings 
-%   - 1: Randomly Uniform. All speeds equally likely
-%   - 2: Hard cutoff. Set speed
-% - Distribution setup in dialogue box
-%   - 1 = Constant to Variable
-%   - 2 = Constant to Restricted range
-%   - 3 = Restricted Range to Variable
+% Setting up the experiment: 
+% - Order
+%   - There are 3 types of speed distribution 
+%   - Each participant will experience all of them
+%   - This means there are 6 different orders we can make 
 % - Condition
 %   - 1: Abstract. Just using squares
 %   - 2: Meaning. Uses Firetrucks and buildings 
@@ -15,10 +14,8 @@ function Firetruck
 %   - 1: Frequency 
 %   - 2: Confidence
 
-%% Check some stuff
-% do we want to make it so that everyone has the same number of distances?
-% Or does that not matter?
-% Also, make the distribution part within subjects 
+%% Need to write something to check resolution 
+
 
 %% add paths
 % to store results
@@ -32,24 +29,23 @@ addpath('images/Truck_version')
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 % dialogue prompt box 
 % experiment details
-prompt = {'Enter Participant ID: ','Distribution','Order','Condition','Measure type'};
+prompt = {'Enter Participant ID: ','Order (1:6)','Condition (1 or 2)','Measure type (1 or 2)'};
 title = 'Input';
 num_lines = 1;
-defaults = {'99','1','1','2','1'}; % setting condition default to 2 so it uses the firetruck
+defaults = {'99','1','2','2','1'}; % setting condition default to 2 so it uses the firetruck
 answer = inputdlg(prompt, title, num_lines, defaults);
 
 % record this
 ID = answer{1};
-trial.spread = str2num(answer{2});        %#ok<ST2NM>
-trial.cond_order = str2num(answer{3});    %#ok<ST2NM>
-trial.condition_num = str2num(answer{4}); %#ok<ST2NM>
-trial.measure = str2num(answer{5});       %#ok<ST2NM>
+trial.cond_order = str2num(answer{2});    %#ok<ST2NM>
+trial.condition_num = str2num(answer{3}); %#ok<ST2NM>
+trial.measure = str2num(answer{4});       %#ok<ST2NM>
 
 % demographics 
 prompt = {'Age', 'Gender', 'Dominant-Hand', 'Major'};
 title = 'Input';
 num_lines = 1;
-defaults = {'', '', '', ''}; % setting condition default to 2 so it uses the firetruck
+defaults = {'', '', '', ''}; 
 answer = inputdlg(prompt, title, num_lines, defaults);
 
 % record this
@@ -99,7 +95,7 @@ else
 end
 
 % open Screen
-[params.stimuliScrn, wRect] = Screen('OpenWindow',screenNumber, 255*params.grey);
+[params.stimuliScrn, wRect] = Screen('OpenWindow',0, 255*params.grey);
 
 % set text size and font
 Screen('TextSize', params.stimuliScrn, 24);
@@ -115,17 +111,17 @@ ListenChar(2);
 [params.centre_x, params.centre_y] = RectCenter(wRect);
 
 % set boundaries for box presentation
-params.deltamin = 200;                 % set min separation
-params.deltamax = params.centre_x - 100;     % set largest separation
+params.deltamin = 200;                     % set min separation
+params.deltamax = params.centre_x - 100;   % set largest separation
 
 % separations to test
 params.step = round(params.deltamax - params.deltamin)/3;
 params.delta = params.deltamin:params.step:params.deltamax; % set of deltas
 
-% block and trial info
-params.nBlocks = 2;       % 2 
-params.reps = 3;         % 15
-params.repsestimate = 1; % 10
+% block and trial info    % defaults:
+params.nBlocks = 3;       % 3
+params.reps = 15;          % 15
+params.repsestimate = 5;  % 10
 
 % for moving object settings 
 % get frame duration 
@@ -140,7 +136,8 @@ box.movetime = 100;                                             % travel time
 box.delay = round(box.movetime/5) - 1;                          % delay before movement
 box.avgspeed = round(median(params.delta)/(box.movetime - 20)); % average speed, might not need
 box.maxspeed = ceil(max(params.delta)/(box.movetime)) - 1;      % max speed
-
+box.minspeed = [1 1 1];
+box.range = [repelem(box.maxspeed, 3)];
 % for the confidence judgements 
 box.judgeline = [0 0 params.centre_x 15];
 box.judgebox = [0 0 15 45];
@@ -165,54 +162,71 @@ HideCursor;
 %%%%%%%%%%%%%%%%%%%%%%%%
 %% Animation settings %%
 %%%%%%%%%%%%%%%%%%%%%%%%
+box.speed_beta_options = [1 1; 10 10; 1000 1000];
+box.speed_orders = [1 2 3; 1 3 2; 2 1 3; 2 3 1; 3 1 2; 3 2 1];
+box.speed_labels = {'uniform' 'broad' 'constant'};
 
+box.order_selected = box.speed_orders(trial.cond_order, 1:3);
+box.speed_desc = box.speed_labels(box.order_selected);
+% for loop to make list of speed orders to index into 
+box.speed_beta = zeros(3,2);
+for ii = 1:3
+    % get the values we want
+    temp_idx = box.order_selected(ii);
+    temp_vals = box.speed_beta_options(temp_idx, 1:2);
+    box.speed_beta(ii, 1:2) = temp_vals;
+end
+% tidy
+clear temp_idx temp_vals
+
+% need to setup the distributions 
 % check condition entered and set box speed distribution
 % ditribution settings
-if trial.cond_order == 1
-    % variable then constant
-    if trial.spread == 1
-        box.speed_beta = [1 1; 10000 10000]; 
-        box.speed_desc = {'variable' 'constant'};
-        box.range = [box.maxspeed, box.maxspeed];
-        box.minspeed = [1 1];
-    % variable then restricted   
-    elseif trial.spread == 2
-        box.speed_beta = [1 1; 1 1]; 
-        box.speed_desc = {'variable' 'restricted'};  
-        box.range = [box.maxspeed, box.maxspeed/2]; 
-        box.minspeed = [1 box.maxspeed/4];
-    % constant then restricted
-    elseif trial.spread == 3
-        box.speed_beta = [10000 10000; 1 1]; 
-        box.speed_desc = {'constant' 'restricted'};  
-        box.range = [box.maxspeed, box.maxspeed/2]; 
-        box.minspeed = [1 box.maxspeed/4];
-    end
-elseif trial.cond_order == 2
-    % constant then variable
-    if trial.spread == 1
-        box.speed_beta = [10000 10000; 1 1]; 
-        box.speed_desc = {'constant' 'variable'};
-        box.range = [box.maxspeed, box.maxspeed];
-        box.minspeed = [1 1];
-    % restricted then variable
-    elseif trial.spread == 2
-        box.speed_beta = [1 1; 1 1]; 
-        box.speed_desc = {'restricted' 'variable'};  
-        box.range = [box.maxspeed/2, box.maxspeed]; 
-        box.minspeed = [box.maxspeed/4 1];
-    % restricted then constant
-    elseif trial.spread == 3
-        box.speed_beta = [1 1; 10000 10000]; 
-        box.speed_desc = {'restricted' 'constant'};  
-        box.range = [box.maxspeed, box.maxspeed/2]; 
-        box.minspeed = [box.maxspeed/4 1];
-    end
-end
+% if trial.cond_order == 1
+%     variable then constant
+%     if trial.spread == 1
+%         box.speed_beta = [1 1; 10000 10000]; 
+%         box.speed_desc = {'variable' 'constant'};
+%         box.range = [box.maxspeed, box.maxspeed];
+%         box.minspeed = [1 1];
+%     variable then restricted   
+%     elseif trial.spread == 2
+%         box.speed_beta = [1 1; 1 1]; 
+%         box.speed_desc = {'variable' 'restricted'};  
+%         box.range = [box.maxspeed, box.maxspeed/2]; 
+%         box.minspeed = [1 box.maxspeed/4];
+%     constant then restricted
+%     elseif trial.spread == 3
+%         box.speed_beta = [10000 10000; 1 1]; 
+%         box.speed_desc = {'constant' 'restricted'};  
+%         box.range = [box.maxspeed, box.maxspeed/2]; 
+%         box.minspeed = [1 box.maxspeed/4];
+%     end
+% elseif trial.cond_order == 2
+%     constant then variable
+%     if trial.spread == 1
+%         box.speed_beta = [10000 10000; 1 1]; 
+%         box.speed_desc = {'constant' 'variable'};
+%         box.range = [box.maxspeed, box.maxspeed];
+%         box.minspeed = [1 1];
+%     restricted then variable
+%     elseif trial.spread == 2
+%         box.speed_beta = [1 1; 1 1]; 
+%         box.speed_desc = {'restricted' 'variable'};  
+%         box.range = [box.maxspeed/2, box.maxspeed]; 
+%         box.minspeed = [box.maxspeed/4 1];
+%     restricted then constant
+%     elseif trial.spread == 3
+%         box.speed_beta = [1 1; 10000 10000]; 
+%         box.speed_desc = {'restricted' 'constant'};  
+%         box.range = [box.maxspeed, box.maxspeed/2]; 
+%         box.minspeed = [box.maxspeed/4 1];
+%     end
+% end
 
 % sort out indexing part
-box.speed_order = [1 2]';
-box.speed_order = repmat(box.speed_order, 1, params.nBlocks/2)'; % divide by two because there are 2 conditions
+box.speed_order = [1 2 3]';
+box.speed_order = repmat(box.speed_order, 1, params.nBlocks/3)';
 box.speed_order = box.speed_order(:)';
 
 % % plot to see what this looks like
@@ -317,7 +331,7 @@ clickhist = [];
 confidence_data = [];
 
 % for counting blocks
-block_count = 1;
+block_count = 0;
 
 % make intro screen
 if strcmp(trial.condition, 'square')
@@ -331,6 +345,7 @@ KbWait;
 
 % run the experiment
 for block = 1:params.nBlocks
+    block_count = block_count + 1;
     % allow for passing of block info
     trial.block = block;
     
@@ -339,7 +354,7 @@ for block = 1:params.nBlocks
     Screen('TextFont', params.stimuliScrn, 'Helvetica');
     
     % sort intro screens
-    if block == 1 || block == params.nBlocks/2 + 1
+    if block == 1 || block == 2 || block == 3
         % Do the observation phase
         DrawFormattedText(params.stimuliScrn, ['First of all, you will do some practice runs to familiarise yourself with how much distance the ' trial.condition ' will travel. You will see the ' trial.condition ' and one ' trial.target '. At which point, you should press the space bar and the ' trial.condition ' will move towards the ' trial.target '.\n \n Press the spacebar when you are ready to start.'], 'center', params.centre_y*0.5, [], round(params.x_res/15));
 
@@ -373,7 +388,7 @@ for block = 1:params.nBlocks
         WaitSecs(1.0);
         KbWait;
     else
-        DrawFormattedText(params.stimuliScrn, ['Block No. ' block_count-1 ' of ' num2str(params.nBlocks/2) ' completed, feel free to take a break. \n Press the spacebar to start the next block'], 'center', params.centre_y-250, [], round(params.x_res/15));
+        DrawFormattedText(params.stimuliScrn, ['Block No. ' block_count-1 ' of ' num2str(params.nBlocks) ' completed, feel free to take a break. \n Press the spacebar to start the next block'], 'center', params.centre_y-250, [], round(params.x_res/15));
         Screen('flip', params.stimuliScrn, 0);
         WaitSecs(1.0);
         KbWait;
@@ -442,11 +457,16 @@ for block = 1:params.nBlocks
     end
  
     % increase block_count
-    block_count = block_count + 1;
+    % block_count = block_count + 1;
     
-    if block == params.nBlocks/2
+    if ismember(block, [1:params.nBlocks-1])
+        % get starting and finishing index
+        start = ((block-1)*params.reps*length(params.delta)) + 1;
+        finish = (block*params.reps*length(params.delta));
         % get success rate 
-        num_success = (sum(enddata(:,end))/length(enddata(:,end)))*100;
+        num_success = (sum(enddata(start:finish,end))/length(enddata(start:finish,end)))*100;
+
+        %num_success = (sum(enddata(:,end))/length(enddata(:,end)))*100;
         
         % now the estimating part is about to begin
         if strcmp(trial.condition, 'truck')
@@ -479,9 +499,11 @@ for block = 1:params.nBlocks
         KbWait();
         
     elseif block == params.nBlocks
+        start = ((block-1)*params.reps*length(params.delta)) + 1;
+        finish = (block*params.reps*length(params.delta));
         % get success rate
-        num_success = (sum(enddata((params.nBlocks/2)*params.reps*length(params.delta)+1:end,end))/length(enddata((params.nBlocks/2)*params.reps*length(params.delta)+1:end,end)))*100;
-        
+        num_success = (sum(enddata(start:finish,end))/length(enddata(start:finish,end)))*100;
+
         % now the estimating part is about to begin
         if strcmp(trial.condition, 'truck')
             DrawFormattedText(params.stimuliScrn, ['One more Task to go! In this half, you saved ' num2str(round(num_success)) '% of buildings from burning down! \n There is one last task before you move onto the next half. In this next section, you will be asked to estimate how often the ' trial.condition ' would reach the taget presented on screen. Whenever you''re ready, press the spacebar to start the last task.'], 'center', params.centre_y-250, [], round(params.x_res/15));

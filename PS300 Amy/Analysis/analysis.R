@@ -3,9 +3,16 @@ library(tidyverse)
 files <- dir("../Data")
 files <- paste("../Data/", files[str_which(files, "enddat")], sep = "")
 
- map_df(files[str_which(files, "enddat")], read_csv) %>%
+import_dat <- function(fl) {
+
+	d <- read_csv(fl)
+	d$participant <- str_extract(fl, "[0-9]+")
+	return(d)
+}
+
+
+map_df(files[str_which(files, "enddat")], import_dat) %>%
  	mutate(
- 		participant = factor(rep(1:36, each = 12)),
  		position_normalised = abs(Placed_x / Delta),
  		precision = as_factor(Spread),
  		precision = fct_recode(precision, random = "1", uncertain = "10", certain = "1000")) -> d 
@@ -35,6 +42,6 @@ d %>%
 	group_by(participant, precision, distance) %>%
 	summarise(mean_position = mean(position_normalised)) -> d2
 
-write_csv(d2, "Emma_firetruck_data.csv")
+write_csv(d2, "Amy_firetruck_data.csv")
 
 ggplot(d2, aes(x = distance, fill = precision, y = mean_position)) + geom_boxplot()
