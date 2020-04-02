@@ -14,7 +14,7 @@ import_dat <- function(fl) {
 map_df(files[str_which(files, "enddat")], import_dat) %>%
  	mutate(
  		position_normalised = abs(Placed_x / Delta),
- 		precision = as_factor(Spread),
+ 		precision = as.factor(Spread),
  		precision = fct_recode(precision, random = "1", uncertain = "10", certain = "1000")) -> d 
 
 
