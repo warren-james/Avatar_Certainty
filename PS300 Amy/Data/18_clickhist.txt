@@ -1,0 +1,4 @@
+Spread,Block,Trial,Time_elapsed,Delta,click_num,Placed_x
+1,1,2,33.234,420,1,154
+1,1,10,2.351,860,1,804
+1,1,37,22.167,200,1,17
