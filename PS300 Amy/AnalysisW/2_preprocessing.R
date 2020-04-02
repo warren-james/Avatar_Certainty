@@ -35,7 +35,8 @@ df_decisions <- df_decisions %>%
          truck_perf = ifelse(Spread == 1, "Random",
                              ifelse(Spread == 10, "Uncertain", "Certain")),
          truck_perf = factor(truck_perf, levels = c("Random", "Uncertain", "Certain")),
-         dist_type = ifelse(Delta < max(Delta)/2, "Close", "Far"))
+         dist_type = ifelse(Delta < max(Delta)/2, "Close", "Far")) %>% 
+  filter(norm_placement <= 1)
 
 # sort out new files
 df_agg <- df_decisions %>% 

@@ -139,11 +139,15 @@ save(df_avatar_info, file = "scratch/df_avatar_info")
 save(df_screen_info, file = "scratch/df_screen_info")
 
 #### click history #### 
+# participant 16 doesn't have any data here for some reason
 results_files <- c("data/Click_history/")
 
 df_clickhist <- tibble()
 
 for(f in dir(results_files)) {
+  if(f == "16_clickhist.txt") {
+    break
+  }
   d <- read.csv(paste(results_files, f, sep = ""))
   d$Participant <- strsplit(f, '[_.]')[[1]][1]
   df_clickhist <- rbind(df_clickhist, d)
