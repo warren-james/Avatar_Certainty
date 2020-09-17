@@ -40,7 +40,8 @@ d %>%
 		distance =as.factor(Delta),
 		distance = fct_recode(distance, close = "200", close = "420", far = "640", far = "860")) %>%
 	group_by(participant, precision, distance) %>%
-	summarise(mean_position = mean(position_normalised)) -> d2
+	summarise(mean_position = mean(position_normalised)) %>%
+	pivot_wider(names_from = c(precision, distance), values_from = mean_position) -> d2
 
 write_csv(d2, "Amy_firetruck_data.csv")
 
